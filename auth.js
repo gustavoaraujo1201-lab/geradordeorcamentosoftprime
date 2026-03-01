@@ -1,16 +1,24 @@
-// auth.js — Sistema de Autenticação com Supabase (novo formato de chaves)
+// auth.js — Sistema de Autenticação com Supabase
 
 class AuthManager {
   constructor() {
     this.supabase = null;
     this.currentUser = null;
+    this._initialized = false;
     this.init();
   }
 
   async init() {
     try {
-      if (typeof supabase === 'undefined') {
-        console.error('❌ Supabase não está carregado');
+      // Aguarda o supabase carregar
+      let attempts = 0;
+      while (typeof window.supabase === 'undefined' && attempts < 20) {
+        await new Promise(r => setTimeout(r, 100));
+        attempts++;
+      }
+
+      if (typeof window.supabase === 'undefined') {
+        console.error('❌ Supabase não está carregado após espera');
         return;
       }
 
@@ -18,29 +26,27 @@ class AuthManager {
       const key = window.SUPABASE_ANON_KEY;
 
       if (!url || !key) {
-        console.error('❌ Credenciais do Supabase não configuradas');
-        console.log('URL:', url);
-        console.log('KEY:', key);
+        console.error('❌ Credenciais não configuradas. URL:', url, 'KEY:', key ? 'OK' : 'VAZIA');
         return;
       }
 
-      console.log('🔄 Inicializando Supabase...');
+      console.log('🔄 Inicializando Supabase com URL:', url);
 
-      // Suporte ao novo formato de chave (sb_publishable_...)
-      // e ao formato antigo (eyJ...)
-      this.supabase = supabase.createClient(url, key, {
+      this.supabase = window.supabase.createClient(url, key, {
         auth: {
           persistSession: true,
           autoRefreshToken: true,
+          detectSessionInUrl: true
         }
       });
 
-      // Verifica sessão atual
       const { data: { session }, error } = await this.supabase.auth.getSession();
 
       if (error) {
         console.error('❌ Erro ao verificar sessão:', error.message);
       }
+
+      this._initialized = true;
 
       if (session) {
         console.log('✅ Usuário já logado:', session.user.email);
@@ -51,7 +57,6 @@ class AuthManager {
         this.showAuth();
       }
 
-      // Listener para mudanças de autenticação
       this.supabase.auth.onAuthStateChange((event, session) => {
         console.log('🔔 Auth event:', event);
         if (session) {
@@ -69,14 +74,14 @@ class AuthManager {
   }
 
   showAuth() {
-    if (window.location.pathname !== '/login.html' && !window.location.pathname.endsWith('login.html')) {
+    if (!window.location.pathname.endsWith('login.html') && window.location.pathname !== '/login.html') {
       console.log('🔐 Redirecionando para login...');
       window.location.href = 'login.html';
     }
   }
 
   showApp() {
-    if (window.location.pathname === '/login.html' || window.location.pathname.endsWith('login.html')) {
+    if (window.location.pathname.endsWith('login.html') || window.location.pathname === '/login.html') {
       console.log('✅ Redirecionando para o app...');
       window.location.href = 'index.html';
       return;
@@ -94,16 +99,20 @@ class AuthManager {
       renderAll();
     }
 
-    console.log('✅ App carregado para:', this.currentUser.email);
+    console.log('✅ App carregado para:', this.currentUser?.email);
   }
 
   async signUp(email, password, fullName) {
     try {
+      if (!this.supabase) {
+        return { success: false, message: '❌ Sistema não inicializado. Recarregue a página.' };
+      }
+
       console.log('🔄 Cadastrando usuário:', email);
 
       const { data, error } = await this.supabase.auth.signUp({
-        email: email,
-        password: password,
+        email,
+        password,
         options: {
           data: { full_name: fullName }
         }
@@ -111,7 +120,7 @@ class AuthManager {
 
       if (error) throw error;
 
-      console.log('✅ Cadastro realizado:', data);
+      console.log('✅ Cadastro realizado');
       return {
         success: true,
         message: '✅ Conta criada! Você já pode fazer login.'
@@ -119,46 +128,38 @@ class AuthManager {
 
     } catch (error) {
       console.error('❌ Erro no cadastro:', error);
-      return {
-        success: false,
-        message: `❌ ${error.message}`
-      };
+      let msg = error.message || 'Erro desconhecido';
+      if (msg.includes('Failed to fetch')) msg = 'Erro de conexão. Verifique sua internet.';
+      if (msg.includes('User already registered')) msg = 'Este email já está cadastrado.';
+      return { success: false, message: `❌ ${msg}` };
     }
   }
 
   async signIn(email, password) {
     try {
+      if (!this.supabase) {
+        return { success: false, message: '❌ Sistema não inicializado. Recarregue a página.' };
+      }
+
       console.log('🔄 Fazendo login:', email);
 
       const { data, error } = await this.supabase.auth.signInWithPassword({
-        email: email,
-        password: password
+        email,
+        password
       });
 
       if (error) throw error;
 
       console.log('✅ Login realizado');
-      return {
-        success: true,
-        message: '✅ Login realizado com sucesso!'
-      };
+      return { success: true, message: '✅ Login realizado com sucesso!' };
 
     } catch (error) {
       console.error('❌ Erro no login:', error);
-
-      let message = error.message;
-      if (message.includes('Invalid login credentials')) {
-        message = 'Email ou senha incorretos';
-      } else if (message.includes('Email not confirmed')) {
-        message = 'Confirme seu email antes de fazer login';
-      } else if (message.includes('Failed to fetch')) {
-        message = 'Erro de conexão com o servidor. Verifique sua internet.';
-      }
-
-      return {
-        success: false,
-        message: `❌ ${message}`
-      };
+      let msg = error.message || 'Erro desconhecido';
+      if (msg.includes('Invalid login credentials')) msg = 'Email ou senha incorretos.';
+      if (msg.includes('Email not confirmed')) msg = 'Confirme seu email antes de fazer login.';
+      if (msg.includes('Failed to fetch')) msg = 'Erro de conexão. Verifique sua internet.';
+      return { success: false, message: `❌ ${msg}` };
     }
   }
 
@@ -180,22 +181,18 @@ class AuthManager {
         redirectTo: `${window.location.origin}/login.html`
       });
       if (error) throw error;
-      return {
-        success: true,
-        message: '✅ Email de recuperação enviado!'
-      };
+      return { success: true, message: '✅ Email de recuperação enviado!' };
     } catch (error) {
       console.error('❌ Erro ao recuperar senha:', error);
       return { success: false, message: `❌ ${error.message}` };
     }
   }
 
-  getUserId() { return this.currentUser ? this.currentUser.id : null; }
-  getUserEmail() { return this.currentUser ? this.currentUser.email : null; }
+  getUserId() { return this.currentUser?.id || null; }
+  getUserEmail() { return this.currentUser?.email || null; }
   getSupabase() { return this.supabase; }
   isAuthenticated() { return this.currentUser !== null; }
 }
 
-// Instância global
 window.authManager = new AuthManager();
 console.log('✅ AuthManager carregado');
