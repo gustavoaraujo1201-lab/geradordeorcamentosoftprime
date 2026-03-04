@@ -1,7 +1,7 @@
 // config.js - Configurações do Supabase
 
 const SUPABASE_URL = "https://eyxydyhpdahkplapitaut.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_7V1-f16E8oOXGge7Wnqtvg_ARVGDj_0";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV5dmR5aHBkYWhrcGxhcGx0YXV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMzQxNTMsImV4cCI6MjA4NzYxMDE1M30.4bQ0J65OdXlpSn85uH07fLGPZCwGbTo1-WoltBLrS5Q";
 
 // Expõe para uso global
 window.SUPABASE_URL = SUPABASE_URL;
