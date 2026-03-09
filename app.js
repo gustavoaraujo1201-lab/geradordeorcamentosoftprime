@@ -818,15 +818,145 @@ if (exportDocBtn) {
 
 function exportQuoteDoc(quoteId){
   try {
-    const q = store.quotes.find(x=>x.id===quoteId); 
+    const q = store.quotes.find(x=>x.id===quoteId);
     if (!q) { showNotification("Orçamento não encontrado", "error"); return; }
     const issuer = store.issuers.find(i=>i.id===q.issuerId)||{};
     const client = store.clients.find(c=>c.id===q.clientId)||{};
-    const html = renderQuoteHtml(q, issuer, client);
-    const doc = `<!doctype html><html><head><meta charset="utf-8"><title>Orçamento ${escapeHtml(q.numero || q.id)}</title><style>body{font-family:Arial,Helvetica,sans-serif;padding:30px;color:#1a1a1a;max-width:800px;margin:0 auto;min-height:calc(100vh - 60px);display:flex;flex-direction:column}table{width:100%;border-collapse:collapse;margin-top:16px;table-layout:auto}th,td{border:1px solid #e5e7eb;padding:10px;text-align:left}th{background:#f9fafb;font-weight:600}td:first-child,th:first-child{word-break:break-word}td:not(:first-child),th:not(:first-child){white-space:nowrap;width:1%}.signature{margin-top:160px;margin-bottom:40px;display:flex;flex-direction:column;align-items:center;gap:8px;page-break-inside:avoid}.signature .sig-line{width:60%;border-top:2px solid #1a1a1a;height:0}.signature .sig-name{font-weight:600;font-size:0.95rem;color:#1a1a1a;margin-top:8px}.print-footer{margin-top:24px;font-size:0.85rem;color:#6b7280;text-align:center}</style></head><body>${html}</body></html>`;
-    const blob = new Blob([doc], { type: "application/msword" });
+
+    const dateOnly = formatDateISOtoLocal(q.createdAt);
+    const money = (v) => parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'); 
+
+    // Logo em base64 se existir
+    const logoHtml = issuer.logo
+      ? `<p style="text-align:center;margin-bottom:12px;"><img src="${issuer.logo}" style="max-height:100px;max-width:260px;" /></p>`
+      : '';
+
+    // Linhas dos itens
+    const itemRows = (q.items||[]).map(it => `
+      <tr>
+        <td style="border:1px solid #cccccc;padding:8px 10px;font-size:11pt;">${escapeHtml(it.descricao||'')}</td>
+        <td style="border:1px solid #cccccc;padding:8px 10px;text-align:center;font-size:11pt;">${it.quantidade}</td>
+        <td style="border:1px solid #cccccc;padding:8px 10px;text-align:right;font-size:11pt;">R$ ${money(it.valorUnitario)}</td>
+        <td style="border:1px solid #cccccc;padding:8px 10px;text-align:right;font-size:11pt;font-weight:bold;">R$ ${money((it.quantidade||0)*(it.valorUnitario||0))}</td>
+      </tr>`).join('');
+
+    // Observações
+    const notesHtml = q.notes ? `
+      <p style="margin-top:20px;padding:10px;background:#fffbeb;border-left:3px solid #f59e0b;font-size:10pt;">
+        <strong>Observações:</strong><br/>${escapeHtml(q.notes).replace(/\n/g,'<br/>')}
+      </p>` : '';
+
+    const doc = `<!doctype html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+  <meta charset="utf-8">
+  <title>Orçamento ${escapeHtml(q.numero||q.id)}</title>
+  <!--[if gte mso 9]><xml>
+    <w:WordDocument>
+      <w:View>Print</w:View>
+      <w:Zoom>100</w:Zoom>
+      <w:DoNotOptimizeForBrowser/>
+    </w:WordDocument>
+  </xml><![endif]-->
+  <style>
+    @page { margin: 2.5cm 2.5cm 2.5cm 2.5cm; size: A4 portrait; }
+    body { font-family: Arial, sans-serif; font-size: 11pt; color: #1a1a1a; margin: 0; padding: 0; }
+    p { margin: 0 0 4px 0; padding: 0; }
+    .titulo { font-size: 18pt; color: #0d7de0; text-align: center; font-weight: bold; letter-spacing: 2px; margin: 8px 0 2px 0; }
+    .numero { font-size: 13pt; text-align: center; font-weight: normal; margin: 0 0 20px 0; }
+    table.layout { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    table.layout td { vertical-align: top; }
+    .box { padding: 10px 14px; border: 1pt solid #e0e0e0; background: #f9fafb; }
+    .label { font-size: 9pt; color: #0d7de0; font-weight: bold; letter-spacing: 1px; margin-bottom: 5px; display: block; }
+    .name  { font-size: 12pt; font-weight: bold; margin-bottom: 3px; display: block; }
+    .cnpj  { font-size: 9pt; color: #6b7280; margin: 2px 0; display: block; }
+    .info  { font-size: 9pt; color: #555555; margin: 1px 0; display: block; }
+    table.items { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px; }
+    table.items th { background: #f2f2f2; border: 1pt solid #cccccc; padding: 7px 10px; font-size: 10pt; font-weight: bold; }
+    table.items td { border: 1pt solid #cccccc; padding: 7px 10px; font-size: 10pt; }
+    .th-desc  { text-align: left; width: 55%; }
+    .th-qtd   { text-align: center; width: 10%; }
+    .th-unit  { text-align: right; width: 17%; }
+    .th-total { text-align: right; width: 18%; }
+    .td-center { text-align: center; }
+    .td-right  { text-align: right; }
+    .td-bold   { font-weight: bold; }
+    .total-label { text-align: right; font-weight: bold; color: #0d7de0; font-size: 11pt; }
+    .total-value { text-align: right; font-weight: bold; color: #0d7de0; font-size: 12pt; }
+    .sig-block { text-align: center; margin-top: 160px; margin-bottom: 40px; }
+    .sig-line-wrap { text-align: center; margin-bottom: 6px; }
+    .sig-hr { width: 55%; border-top: 1.5pt solid #1a1a1a; display: inline-block; font-size: 0; line-height: 0; }
+    .sig-name { font-size: 10pt; font-weight: bold; text-align: center; margin-top: 4px; }
+    .footer { text-align: center; font-size: 9pt; color: #888888; margin-top: 16px; }
+  </style>
+</head>
+<body>
+
+  ${logoHtml}
+
+  <p class="titulo">ORÇAMENTO</p>
+  <p class="numero">${escapeHtml(q.numero||'')}</p>
+
+  <table class="layout">
+    <tr>
+      <td style="width:49%;" class="box">
+        <span class="label">EMISSOR</span>
+        <span class="name">${escapeHtml(issuer.name||'—')}</span>
+        ${issuer.cnpjCpf ? `<span class="cnpj">CNPJ/CPF: ${escapeHtml(issuer.cnpjCpf)}</span>` : ''}
+        ${issuer.address  ? `<span class="info">${escapeHtml(issuer.address)}</span>` : ''}
+        ${issuer.phone    ? `<span class="info">Tel: ${escapeHtml(issuer.phone)}</span>` : ''}
+      </td>
+      <td style="width:2%;"></td>
+      <td style="width:49%;" class="box">
+        <span class="label">DESTINATÁRIO</span>
+        <span class="name">${escapeHtml(client.name||'—')}</span>
+        ${client.cnpjCpf ? `<span class="cnpj">CNPJ/CPF: ${escapeHtml(client.cnpjCpf)}</span>` : ''}
+        ${client.address  ? `<span class="info">${escapeHtml(client.address)}</span>` : ''}
+        ${client.phone    ? `<span class="info">Tel: ${escapeHtml(client.phone)}</span>` : ''}
+      </td>
+    </tr>
+  </table>
+
+  <table class="items">
+    <thead>
+      <tr>
+        <th class="th-desc">Descrição</th>
+        <th class="th-qtd">Qtd</th>
+        <th class="th-unit">Valor Unit.</th>
+        <th class="th-total">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${itemRows}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="3" class="total-label">TOTAL:</td>
+        <td class="total-value">R$ ${money(q.total||0)}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  ${notesHtml}
+
+  <div class="sig-block">
+    <p class="sig-line-wrap"><span class="sig-hr">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></p>
+    <p class="sig-name">${escapeHtml(issuer.name||'')}</p>
+  </div>
+
+  <p class="footer">Orçamento gerado em: ${dateOnly}</p>
+
+</body>
+</html>`;
+
+    const blob = new Blob(['\ufeff' + doc], { type: "application/msword;charset=utf-8" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `orcamento_${q.numero || q.id}.doc`; a.click();
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `orcamento_${q.numero || q.id}.doc`;
+    a.click();
     URL.revokeObjectURL(url);
     showNotification("✅ Word exportado!", "success");
   } catch (err) { console.error("[ERROR] exportQuoteDoc:", err); showNotification("Erro ao exportar documento", "error"); }
