@@ -64,34 +64,132 @@
       padding: 0 5px;
     }
 
-    /* Overlay */
-    .sidebar-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(15,23,42,0.38);
-      z-index: 390;
-      backdrop-filter: blur(2px);
-      -webkit-backdrop-filter: blur(2px);
-    }
-    .sidebar-overlay.visible { display: block; }
+    /* Painel antigo desativado */
+    .sidebar-overlay { display: none !important; }
+    .sidebar-panel   { display: none !important; }
 
-    /* Painel — dropdown a partir do header */
-    .sidebar-panel {
-      position: fixed;
-      top: 60px; /* altura do header do site */
-      left: 0; right: 0;
-      height: 0;
-      overflow: hidden;
-      background: #fff;
-      z-index: 400;
-      display: flex;
+    /* ============================================================
+       TELA DE ORÇAMENTOS SALVOS — substitui o conteúdo principal
+    ============================================================ */
+    #quotesScreen {
+      display: none;
       flex-direction: column;
-      transition: height 0.36s cubic-bezier(0.4,0,0.2,1);
-      box-shadow: 0 8px 40px rgba(0,0,0,0.16);
+      min-height: calc(100vh - 65px);
+      background: #f6f8fb;
     }
-    .sidebar-panel.open {
-      height: calc(85vh - 60px);
+    #quotesScreen.active { display: flex; }
+
+    .qs-hero {
+      background: linear-gradient(135deg, #0a1628 0%, #0d2b5e 55%, #0d7de0 100%);
+      padding: 36px 32px 28px;
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .qs-hero::before {
+      content: '';
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .qs-hero-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+    .qs-back-btn {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.20);
+      color: rgba(200,225,255,0.9);
+      padding: 7px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      margin-bottom: 18px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      transition: all 0.2s;
+    }
+    .qs-back-btn:hover {
+      background: rgba(255,255,255,0.22);
+      color: #fff;
+    }
+    .qs-hero-title {
+      display: flex; align-items: center; gap: 14px;
+      margin-bottom: 4px;
+    }
+    .qs-hero-icon {
+      width: 50px; height: 50px;
+      background: rgba(255,255,255,0.14);
+      border-radius: 13px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px;
+    }
+    .qs-hero-title h1 {
+      color: #fff; font-size: 26px; font-weight: 800; margin: 0;
+      letter-spacing: -0.3px;
+    }
+    .qs-hero-sub {
+      color: rgba(180,210,255,0.8); font-size: 14px;
+      margin: 0 0 22px 64px;
+    }
+    .qs-stats {
+      display: flex; gap: 12px; margin-left: 64px;
+      flex-wrap: wrap;
+    }
+    .qs-stat {
+      background: rgba(255,255,255,0.10);
+      border: 1px solid rgba(255,255,255,0.13);
+      border-radius: 10px;
+      padding: 10px 22px;
+      min-width: 130px;
+    }
+    .qs-stat-value { color: #fff; font-size: 22px; font-weight: 700; }
+    .qs-stat-label { color: rgba(180,210,255,0.7); font-size: 11px; margin-top: 2px; }
+
+    .qs-body {
+      display: flex;
+      flex: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      width: 100%;
+      padding: 24px 16px 40px;
+      gap: 20px;
+      align-items: flex-start;
+    }
+    .qs-sidebar {
+      width: 260px;
+      min-width: 220px;
+      flex-shrink: 0;
+    }
+    .qs-sidebar-card {
+      background: #fff;
+      border: 1px solid rgba(20,30,40,0.12);
+      border-radius: 10px;
+      padding: 18px;
+      box-shadow: 0 2px 12px rgba(20,30,40,0.08);
+      margin-bottom: 14px;
+    }
+    .qs-sidebar-title {
+      font-size: 11px; font-weight: 700;
+      color: #64748b; text-transform: uppercase;
+      letter-spacing: 0.6px; margin-bottom: 10px;
+    }
+    .qs-main { flex: 1; min-width: 0; }
+
+    @media (max-width: 768px) {
+      .qs-body { flex-direction: column; padding: 16px 12px 32px; }
+      .qs-sidebar { width: 100%; min-width: unset; }
+      .qs-hero { padding: 24px 16px 20px; }
+      .qs-hero-title h1 { font-size: 20px; }
+      .qs-hero-sub { margin-left: 0; margin-top: 8px; }
+      .qs-stats { margin-left: 0; margin-top: 8px; }
     }
 
     /* Layout interno em duas colunas */
@@ -456,55 +554,46 @@
 </head>
 <body>
 
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-  <!-- Painel full-width que desce do topo -->
-  <div class="sidebar-panel" id="sidebarPanel">
-    <div class="sp-body">
-
-      <!-- Coluna esquerda: stats + analytics -->
-      <div class="sp-left">
-        <div class="sp-header">
-          <div class="sp-header-top">
-            <div class="sp-header-title">
-              <div class="sp-header-icon">💼</div>
-              <div class="sp-header-text">
-                <h3>Orçamentos Salvos</h3>
-                <p>Gerencie todos os seus orçamentos</p>
-              </div>
-            </div>
-            <button class="sp-close-btn" id="spClose" aria-label="Fechar">✕</button>
-          </div>
-          <div class="sp-stats">
-            <div class="sp-stat">
-              <div class="sp-stat-value" id="spStatTotal">0</div>
-              <div class="sp-stat-label">Total gerados</div>
-            </div>
-            <div class="sp-stat">
-              <div class="sp-stat-value" id="spStatValue">R$ 0</div>
-              <div class="sp-stat-label">Valor acumulado</div>
-            </div>
-
-          </div>
+  <!-- TELA DE ORÇAMENTOS SALVOS -->
+  <div id="quotesScreen">
+    <div class="qs-hero">
+      <div class="qs-hero-inner">
+        <button class="qs-back-btn" id="qsBackBtn">← Voltar ao início</button>
+        <div class="qs-hero-title">
+          <div class="qs-hero-icon">💼</div>
+          <h1>Orçamentos Salvos</h1>
         </div>
-
-        <!-- Filtros rápidos por Emissor / Cliente -->
-        <div class="sp-filters" id="spFilters">
-          <div class="sp-filter-section">
-            <div class="sp-filter-label">🏢 Filtrar por Emissor</div>
-            <div class="sp-filter-chips" id="spIssuerChips"></div>
+        <p class="qs-hero-sub">Gerencie todos os seus orçamentos</p>
+        <div class="qs-stats">
+          <div class="qs-stat">
+            <div class="qs-stat-value" id="spStatTotal">0</div>
+            <div class="qs-stat-label">Total gerados</div>
           </div>
-          <div class="sp-filter-section">
-            <div class="sp-filter-label">👤 Filtrar por Cliente</div>
-            <div class="sp-filter-chips" id="spClientChips"></div>
+          <div class="qs-stat">
+            <div class="qs-stat-value" id="spStatValue">R$ 0,00</div>
+            <div class="qs-stat-label">Valor acumulado</div>
           </div>
-          <button class="sp-filter-clear" id="spFilterClear" style="display:none;">✕ Limpar filtros</button>
         </div>
       </div>
+    </div>
 
-      <!-- Coluna direita: busca + lista de orçamentos -->
-      <div class="sp-right">
-        <div class="sp-search">
+    <div class="qs-body">
+      <!-- Sidebar de filtros -->
+      <div class="qs-sidebar">
+        <div class="qs-sidebar-card">
+          <div class="qs-sidebar-title">🏢 Filtrar por Emissor</div>
+          <div class="sp-filter-chips" id="spIssuerChips"></div>
+        </div>
+        <div class="qs-sidebar-card">
+          <div class="qs-sidebar-title">👤 Filtrar por Cliente</div>
+          <div class="sp-filter-chips" id="spClientChips"></div>
+        </div>
+        <button class="sp-filter-clear" id="spFilterClear" style="display:none;">✕ Limpar filtros</button>
+      </div>
+
+      <!-- Conteúdo principal: busca + lista -->
+      <div class="qs-main">
+        <div style="background:#fff;border:1px solid rgba(20,30,40,0.12);border-radius:10px;padding:14px 16px;margin-bottom:16px;box-shadow:0 2px 12px rgba(20,30,40,0.08);">
           <div class="sp-search-box">
             <span>🔍</span>
             <input type="text" class="sp-search-input" id="spSearch" placeholder="Pesquisar por número, cliente, emissor..." autocomplete="off" />
@@ -512,7 +601,7 @@
           </div>
           <div class="sp-results-info" id="spResultsInfo"></div>
         </div>
-        <div class="sp-list" id="spList">
+        <div id="spList">
           <div class="sp-empty">
             <div class="sp-empty-icon">📭</div>
             <h4>Nenhum orçamento ainda</h4>
@@ -520,7 +609,6 @@
           </div>
         </div>
       </div>
-
     </div>
   </div>
 
@@ -687,16 +775,18 @@
   </script>
   <script src="app.js"></script>
   <script>
-    // ===== PAINEL ORÇAMENTOS SALVOS — com filtros por emissor/cliente =====
-    const spPanel   = document.getElementById('sidebarPanel');
-    const spFab     = document.getElementById('sidebarFab');
-    const spClose   = document.getElementById('spClose');
-    const spOverlay = document.getElementById('sidebarOverlay');
+    // ===== NAVEGAÇÃO ENTRE TELAS (SPA) =====
+    const appScreen    = document.getElementById('appScreen');
+    const quotesScreen = document.getElementById('quotesScreen');
+    const spFab        = document.getElementById('sidebarFab');
+    const qsBackBtn    = document.getElementById('qsBackBtn');
+    const fabBadge     = document.getElementById('fabBadge');
+
+    // Elementos do painel de orçamentos
     const spSearch  = document.getElementById('spSearch');
     const spClear   = document.getElementById('spClear');
     const spList    = document.getElementById('spList');
     const spInfo    = document.getElementById('spResultsInfo');
-    const fabBadge  = document.getElementById('fabBadge');
     const spStatTotal = document.getElementById('spStatTotal');
     const spStatValue = document.getElementById('spStatValue');
     const spIssuerChips  = document.getElementById('spIssuerChips');
@@ -706,26 +796,35 @@
     let spQuery = '';
     let activeIssuerId = null;
     let activeClientId = null;
+    let onQuotesScreen = false;
 
     function norm(s) { return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
     function fmtDate(iso) { return iso ? new Date(iso).toLocaleDateString('pt-BR') : ''; }
     function fmtMoney(v) { return 'R$ ' + Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
-    const openPanel  = () => {
-      spPanel.classList.add('open');
-      spOverlay.classList.add('visible');
+    function showQuotesScreen() {
+      onQuotesScreen = true;
+      appScreen.style.display = 'none';
+      quotesScreen.classList.add('active');
       spFab.classList.add('active');
+      window.scrollTo(0, 0);
       renderPanel();
-    };
-    const closePanel = () => {
-      spPanel.classList.remove('open');
-      spOverlay.classList.remove('visible');
-      spFab.classList.remove('active');
-    };
+    }
 
-    spFab.addEventListener('click', () => spPanel.classList.contains('open') ? closePanel() : openPanel());
-    spClose.addEventListener('click', closePanel);
-    spOverlay.addEventListener('click', closePanel);
+    function showAppScreen() {
+      onQuotesScreen = false;
+      appScreen.style.display = '';
+      quotesScreen.classList.remove('active');
+      spFab.classList.remove('active');
+      window.scrollTo(0, 0);
+    }
+
+    spFab.addEventListener('click', () => {
+      if (onQuotesScreen) showAppScreen();
+      else showQuotesScreen();
+    });
+
+    if (qsBackBtn) qsBackBtn.addEventListener('click', showAppScreen);
 
     spSearch.addEventListener('input', () => {
       spQuery = spSearch.value;
@@ -821,7 +920,7 @@
         spList.innerHTML = `<div class="sp-empty">
           <div class="sp-empty-icon">${activeFilters ? '🔍' : '📭'}</div>
           <h4>${activeFilters ? 'Nenhum resultado' : 'Nenhum orçamento ainda'}</h4>
-          <p>${activeFilters ? 'Tente outros filtros' : 'Crie seu primeiro orçamento acima'}</p>
+          <p>${activeFilters ? 'Tente outros filtros' : 'Crie seu primeiro orçamento'}</p>
         </div>`;
         return;
       }
@@ -832,6 +931,7 @@
         const cli = (store.clients||[]).find(c=>c.id===qt.clientId)||{};
         const card = document.createElement('div');
         card.className = 'sp-card';
+        card.style.cssText = 'background:#fff;border:1.5px solid #e8edf5;border-radius:12px;padding:16px 18px;margin-bottom:10px;cursor:pointer;transition:all 0.22s;position:relative;overflow:hidden;';
         card.innerHTML = `
           <div class="sp-card-top">
             <span class="sp-card-num">📄 ${qt.numero || qt.id}</span>
@@ -844,19 +944,29 @@
           <div class="sp-card-footer">
             <span class="sp-card-date">📅 ${fmtDate(qt.createdAt)}</span>
             <div class="sp-card-btns">
-              <button class="sp-card-btn view"              data-id="${qt.id}">👁 Ver</button>
+              <button class="sp-card-btn view" data-id="${qt.id}">👁 Ver</button>
               <button class="sp-card-btn" data-action="word" data-id="${qt.id}" title="Word">📄</button>
               <button class="sp-card-btn" data-action="pdf"  data-id="${qt.id}" title="PDF">📑</button>
               <button class="sp-card-btn" data-action="edit" data-id="${qt.id}" title="Editar">✏️</button>
               <button class="sp-card-btn del" data-action="del" data-id="${qt.id}" title="Excluir">🗑</button>
             </div>
           </div>`;
-        card.addEventListener('click', e => { if (e.target.closest('.sp-card-btn')) return; if (typeof openPreview==='function') openPreview(qt.id); closePanel(); });
-        card.querySelector('.sp-card-btn.view').addEventListener('click', () => { if (typeof openPreview==='function') openPreview(qt.id); closePanel(); });
+        card.addEventListener('click', e => {
+          if (e.target.closest('.sp-card-btn')) return;
+          if (typeof openPreview==='function') openPreview(qt.id);
+          showAppScreen();
+        });
+        card.querySelector('.sp-card-btn.view').addEventListener('click', () => {
+          if (typeof openPreview==='function') openPreview(qt.id);
+          showAppScreen();
+        });
         card.querySelector('[data-action="word"]').addEventListener('click', () => { if (typeof exportQuoteDoc==='function') exportQuoteDoc(qt.id); });
         card.querySelector('[data-action="pdf"]').addEventListener('click',  () => { if (typeof exportQuotePdf==='function') exportQuotePdf(qt.id); });
-        card.querySelector('[data-action="edit"]').addEventListener('click', () => { if (typeof startEditMode==='function') startEditMode(qt.id); closePanel(); });
-        card.querySelector('[data-action="del"]').addEventListener('click',  () => {
+        card.querySelector('[data-action="edit"]').addEventListener('click', () => {
+          if (typeof startEditMode==='function') startEditMode(qt.id);
+          showAppScreen();
+        });
+        card.querySelector('[data-action="del"]').addEventListener('click', () => {
           if (!confirm('❓ Excluir este orçamento?')) return;
           store.quotes = store.quotes.filter(x=>x.id!==qt.id);
           if (typeof saveStore==='function') saveStore(store);
