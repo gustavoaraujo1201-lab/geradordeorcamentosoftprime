@@ -10,7 +10,6 @@ class AuthManager {
 
   async init() {
     try {
-      // Aguarda o supabase carregar
       let attempts = 0;
       while (typeof window.supabase === 'undefined' && attempts < 20) {
         await new Promise(r => setTimeout(r, 100));
@@ -89,7 +88,6 @@ class AuthManager {
 
     const userNameEl = document.getElementById('userName');
     if (userNameEl && this.currentUser) {
-      // Buscar username do perfil
       this.supabase
         .from('profiles')
         .select('username, full_name')
@@ -119,19 +117,18 @@ class AuthManager {
         return { success: false, message: '❌ Sistema não inicializado. Recarregue a página.' };
       }
 
-      // Validar formato do username
-      if (!username || username.length < 3) {
-        return { success: false, message: '❌ Nome de usuário deve ter pelo menos 3 caracteres.' };
-      }
-      if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-        return { success: false, message: '❌ Nome de usuário pode conter apenas letras, números e _' };
+      // Validação mínima: apenas verifica comprimento
+      if (!username || username.trim().length < 2) {
+        return { success: false, message: '❌ Nome de usuário deve ter pelo menos 2 caracteres.' };
       }
 
-      // Verificar se username já existe
+      const cleanUsername = username.trim();
+
+      // Verificar se username já existe (busca case-insensitive)
       const { data: existingUser } = await this.supabase
         .from('profiles')
         .select('id')
-        .eq('username', username.toLowerCase())
+        .ilike('username', cleanUsername)
         .maybeSingle();
 
       if (existingUser) {
@@ -144,7 +141,7 @@ class AuthManager {
         email,
         password,
         options: {
-          data: { username: username.toLowerCase() }
+          data: { username: cleanUsername }
         }
       });
 
@@ -157,7 +154,7 @@ class AuthManager {
           .upsert({
             id: data.user.id,
             email,
-            username: username.toLowerCase(),
+            username: cleanUsername,
             updated_at: new Date().toISOString()
           });
         if (profileError) {
@@ -186,29 +183,32 @@ class AuthManager {
         return { success: false, message: '❌ Sistema não inicializado. Recarregue a página.' };
       }
 
-      let email = identifier;
+      let email = identifier.trim();
 
       // Se não contém '@', trata como username e busca o email correspondente
-      if (!identifier.includes('@')) {
-        console.log('🔄 Buscando email por username:', identifier.toLowerCase());
+      if (!email.includes('@')) {
+        console.log('🔄 Buscando email por username:', email);
+
+        // Busca case-insensitive pelo username
         const { data: profile, error: profileError } = await this.supabase
           .from('profiles')
           .select('email')
-          .eq('username', identifier.toLowerCase())
+          .ilike('username', email)
           .maybeSingle();
 
         if (profileError) {
           console.error('❌ Erro ao buscar perfil:', profileError.message);
         }
 
-        if (!profile) {
+        if (!profile || !profile.email) {
           return { success: false, message: '❌ Usuário não encontrado. Verifique seu email ou nome de usuário.' };
         }
 
         email = profile.email;
+        console.log('✅ Email encontrado para o username:', email);
       }
 
-      console.log('🔄 Fazendo login:', email);
+      console.log('🔄 Fazendo login com email:', email);
 
       const { data, error } = await this.supabase.auth.signInWithPassword({
         email,
