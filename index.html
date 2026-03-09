@@ -711,6 +711,20 @@
           await window.authManager.signOut();
         };
       }
+
+      // Fecha modais com a tecla Esc
+      document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        const previewModal = document.getElementById('previewModal');
+        if (previewModal && !previewModal.classList.contains('hidden')) {
+          previewModal.classList.add('hidden');
+          return;
+        }
+        const profileModal = document.getElementById('profileModal');
+        if (profileModal && !profileModal.classList.contains('hidden')) {
+          profileModal.classList.add('hidden');
+        }
+      });
     });
   </script>
 

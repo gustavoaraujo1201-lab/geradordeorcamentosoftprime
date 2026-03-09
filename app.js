@@ -751,10 +751,11 @@ if (printBtn) {
           <style>
             body{font-family:Arial,Helvetica,sans-serif;padding:30px 30px 70px 30px;color:#1a1a1a;max-width:800px;margin:0 auto}
             table{width:100%;border-collapse:collapse;margin-top:16px;table-layout:auto}
-            th,td{border:1px solid #e5e7eb;padding:10px;text-align:left}
+            th,td{border:1px solid #e5e7eb;padding:10px;text-align:left;vertical-align:middle}
             th{background:#f9fafb;font-weight:600}
-            td:first-child,th:first-child{word-break:break-word;}
-            td:not(:first-child),th:not(:first-child){white-space:nowrap;width:1%;}
+            th:first-child,td:first-child{word-break:break-word;min-width:200px}
+            th:not(:first-child),td:not(:first-child){white-space:nowrap;width:1%;text-align:right}
+            th:nth-child(2),td:nth-child(2){text-align:center}
             .signature{margin-top:280px;display:flex;flex-direction:column;align-items:center;gap:8px;page-break-inside:avoid}
             .signature .sig-line{width:60%;border-top:2px solid #1a1a1a;height:0}
             .signature .sig-name{font-weight:600;font-size:0.95rem;color:#1a1a1a;margin-top:8px}
@@ -865,15 +866,15 @@ function renderQuoteHtml(q, issuer, client){
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-bottom:30px;">
         <div style="padding:16px;background:#f9fafb;border-radius:8px;">
           <h3 style="margin:0 0 12px 0;color:#0d7de0;font-size:16px;">EMISSOR</h3>
-          <strong style="font-size:16px;">${escapeHtml(issuer.name||'—')}</strong><br/>
-          ${issuer.cnpjCpf? '<span style="color:#6b7280;">CNPJ/CPF:</span> ' + escapeHtml(issuer.cnpjCpf) + '<br/>':''}
-          <div style="font-size:14px;color:#4b5563;margin-top:8px;">${issuerContact}</div>
+          <strong style="font-size:16px;">${escapeHtml(issuer.name||'—')}</strong>
+          ${issuer.cnpjCpf? '<div style="font-size:13px;color:#6b7280;margin-top:6px;"><span>CNPJ/CPF:</span> ' + escapeHtml(issuer.cnpjCpf) + '</div>':''}
+          <div style="font-size:14px;color:#4b5563;margin-top:2px;">${issuerContact}</div>
         </div>
         <div style="padding:16px;background:#f9fafb;border-radius:8px;">
           <h3 style="margin:0 0 12px 0;color:#0d7de0;font-size:16px;">DESTINATÁRIO</h3>
-          <strong style="font-size:16px;">${escapeHtml(client.name||'—')}</strong><br/>
-          ${client.cnpjCpf? '<span style="color:#6b7280;">CNPJ/CPF:</span> ' + escapeHtml(client.cnpjCpf) + '<br/>':''}
-          <div style="font-size:14px;color:#4b5563;margin-top:8px;">${clientContact}</div>
+          <strong style="font-size:16px;">${escapeHtml(client.name||'—')}</strong>
+          ${client.cnpjCpf? '<div style="font-size:13px;color:#6b7280;margin-top:6px;"><span>CNPJ/CPF:</span> ' + escapeHtml(client.cnpjCpf) + '</div>':''}
+          <div style="font-size:14px;color:#4b5563;margin-top:2px;">${clientContact}</div>
         </div>
       </div>
       
