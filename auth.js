@@ -141,7 +141,8 @@ class AuthManager {
         email,
         password,
         options: {
-          data: { username: cleanUsername }
+          data: { username: cleanUsername },
+          emailRedirectTo: null
         }
       });
 
@@ -160,6 +161,13 @@ class AuthManager {
         if (profileError) {
           console.error('❌ Erro ao salvar perfil:', profileError.message);
         }
+      }
+
+      // Tenta fazer login automático após cadastro
+      // (funciona quando confirmação de email está desativada no Supabase)
+      const { error: signInError } = await this.supabase.auth.signInWithPassword({ email, password });
+      if (!signInError) {
+        console.log('✅ Login automático após cadastro');
       }
 
       console.log('✅ Cadastro realizado');
