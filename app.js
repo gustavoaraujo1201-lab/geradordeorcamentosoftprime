@@ -195,7 +195,7 @@ function setDefaultQuoteFields(){
   }
 
   quoteNumber.value = formatQuoteNumber(nextNum);
-  quoteDate.value = new Date().toLocaleDateString('pt-BR');
+  quoteDate.value = new Date().toISOString().slice(0, 10);
   if (notes) notes.value = "";
 }
 
@@ -635,7 +635,12 @@ if (saveQuoteBtn) {
         q.issuerId = issuerId; q.clientId = clientId; q.numero = numeroValue || null;
         q.items = JSON.parse(JSON.stringify(validItems));
         q.subtotal = totals.subtotal; q.total = totals.total;
-        q.notes = notesVal; q.updatedAt = new Date().toISOString();
+        q.notes = notesVal;
+        // Salva a data editada pelo usuário
+        if (quoteDate && quoteDate.value) {
+          q.createdAt = new Date(quoteDate.value + 'T12:00:00').toISOString();
+        }
+        q.updatedAt = new Date().toISOString();
         saveStore(store);
         showNotification(`✅ Orçamento ${q.numero} atualizado!`, "success");
         endEditMode(); renderQuotes();
@@ -676,7 +681,11 @@ function startEditMode(quoteId) {
   if (selectIssuer) selectIssuer.value = q.issuerId || "";
   if (selectClient) selectClient.value = q.clientId || "";
   if (quoteNumber) { quoteNumber.value = q.numero || ""; quoteNumber.removeAttribute("readonly"); }
-  if (quoteDate) quoteDate.value = formatDateISOtoLocal(q.createdAt || q.updatedAt || new Date().toISOString());
+  if (quoteDate) {
+    const iso = q.createdAt || q.updatedAt || new Date().toISOString();
+    quoteDate.value = iso.slice(0, 10);
+    quoteDate.removeAttribute('readonly');
+  }
   if (notes) notes.value = q.notes || "";
   
   currentItems = JSON.parse(JSON.stringify(q.items || [{descricao:"",quantidade:1,valorUnitario:0}]));
