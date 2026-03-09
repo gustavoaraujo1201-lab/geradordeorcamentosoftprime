@@ -751,11 +751,10 @@ if (printBtn) {
           <style>
             body{font-family:Arial,Helvetica,sans-serif;padding:30px 30px 70px 30px;color:#1a1a1a;max-width:800px;margin:0 auto}
             table{width:100%;border-collapse:collapse;margin-top:16px;table-layout:auto}
-            th,td{border:1px solid #e5e7eb;padding:10px;text-align:left;vertical-align:middle}
+            th,td{border:1px solid #e5e7eb;padding:10px;text-align:left}
             th{background:#f9fafb;font-weight:600}
-            th:first-child,td:first-child{word-break:break-word;min-width:200px}
-            th:not(:first-child),td:not(:first-child){white-space:nowrap;width:1%;text-align:right}
-            th:nth-child(2),td:nth-child(2){text-align:center}
+            td:first-child,th:first-child{word-break:break-word;}
+            td:not(:first-child),th:not(:first-child){white-space:nowrap;width:1%;}
             .signature{margin-top:280px;display:flex;flex-direction:column;align-items:center;gap:8px;page-break-inside:avoid}
             .signature .sig-line{width:60%;border-top:2px solid #1a1a1a;height:0}
             .signature .sig-name{font-weight:600;font-size:0.95rem;color:#1a1a1a;margin-top:8px}
