@@ -1,31 +1,54 @@
 /* background-suggestion.css
-   Coloque este CSS e adicione <div id="bg-futuristic"></div> como primeiro filho de <body>
+   Layer de fundo animado (gradiente em movimento) + espaço para partículas.
+   Coloque este arquivo na raiz e adicione o <link> no <head>.
 */
+:root{
+  --bg-dark-1: #071021;
+  --bg-dark-2: #00122b;
+  --accent-1: rgba(13,125,224,0.08);
+  --accent-2: rgba(10,95,184,0.06);
+}
+
+/* Layer de gradiente com movimento */
 #bg-futuristic{
-  position:fixed;
-  inset:0;
-  z-index: -1; /* atrás do conteúdo */
+  position: fixed;
+  inset: 0;
+  z-index: -2; /* atrás do conteúdo */
   background: linear-gradient(120deg, #071021 0%, #00122b 40%, #07203a 60%, #050b14 100%);
   background-size: 300% 300%;
-  filter: saturate(120%) blur(6px);
-  animation: moveGradient 12s ease infinite;
+  filter: saturate(110%) blur(6px);
+  animation: moveGradient 14s ease-in-out infinite;
   pointer-events: none;
 }
 
-/* sutil movimento do gradiente */
+/* Container para particles (opcional) */
+#tsparticles{
+  position: fixed;
+  inset: 0;
+  z-index: -3; /* atrás do gradiente para profundidade */
+  pointer-events: none;
+}
+
+/* overlays sutis de brilho/neon */
+#bg-futuristic::after{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 10% 10%, rgba(13,125,224,0.10), transparent 6%),
+    radial-gradient(circle at 90% 80%, rgba(10,95,184,0.08), transparent 8%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+/* animação do gradiente */
 @keyframes moveGradient {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
 
-/* overlay neon / grid opcional */
-#bg-futuristic::after{
-  content: "";
-  position: absolute;
-  inset:0;
-  background: radial-gradient(circle at 10% 10%, rgba(13,125,224,0.08), transparent 6%),
-              radial-gradient(circle at 90% 80%, rgba(10,95,184,0.06), transparent 8%);
-  mix-blend-mode: screen;
-  pointer-events: none;
+/* Ajustes responsivos (evitar blur muito pesado em mobile) */
+@media (max-width: 600px){
+  #bg-futuristic{ filter: saturate(100%) blur(4px); animation-duration: 18s; }
 }
