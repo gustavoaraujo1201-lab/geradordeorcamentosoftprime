@@ -235,10 +235,10 @@
 
       <div class="actions-row">
         <label class="remember" id="rememberLabel" role="checkbox" aria-checked="false" tabindex="0" onkeydown="keyToggleRemember(event)" onclick="toggleRemember()">
+          <span>Manter conectado</span>
           <div class="toggle" id="rememberToggle">
             <div class="knob"></div>
           </div>
-          <span>Manter conectado</span>
         </label>
         <button type="button" class="forgot-link-inline" id="forgotPasswordBtn">Esqueceu sua senha?</button>
       </div>
@@ -259,7 +259,7 @@
           <label for="signupUsername">Nome de Usuário</label>
           <div class="field-inner">
             <span class="field-icon">👤</span>
-            <input type="text" id="signupUsername" placeholder="usuario" autocomplete="username" required />
+            <input type="text" id="signupUsername" placeholder="seu_usuario" autocomplete="username" required />
           </div>
         </div>
         <div class="field">
@@ -273,7 +273,7 @@
           <label for="signupPassword">Senha</label>
           <div class="field-inner">
             <span class="field-icon">🔒</span>
-            <input type="password" id="signupPassword" placeholder="••••••••" autocomplete="new-password" required />
+            <input type="password" id="signupPassword" placeholder="mínimo 6 caracteres" autocomplete="new-password" required />
             <button type="button" class="field-btn" onclick="togglePass('signupPassword', this)" title="Mostrar/ocultar senha">👁</button>
           </div>
         </div>
