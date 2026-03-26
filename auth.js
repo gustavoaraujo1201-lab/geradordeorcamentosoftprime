@@ -166,6 +166,29 @@ class AuthManager {
 
       if (!signInError && signInData?.session) {
         console.log('✅ Login automático após cadastro');
+
+        // Agora com sessão ativa, salva o profile corretamente
+        try {
+          const uid = signInData.session.user.id;
+          const { error: profileError } = await this.supabase
+            .from('profiles')
+            .upsert({
+              id: uid,
+              email: email,
+              username: cleanUsername,
+              full_name: cleanUsername,
+              updated_at: new Date().toISOString()
+            }, { onConflict: 'id' });
+
+          if (profileError) {
+            console.warn('⚠️ Erro ao salvar profile após login:', profileError.message);
+          } else {
+            console.log('✅ Profile salvo com sucesso após login automático');
+          }
+        } catch (e) {
+          console.warn('⚠️ Exceção ao salvar profile:', e.message);
+        }
+
         return { success: true, autoLogin: true, message: '✅ Conta criada e login realizado!' };
       }
 
