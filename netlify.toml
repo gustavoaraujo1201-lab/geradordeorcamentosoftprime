@@ -1,0 +1,14 @@
+[build]
+  publish = "."
+
+# Raiz vai direto para login.html
+[[redirects]]
+  from = "/"
+  to = "/login.html"
+  status = 302
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"

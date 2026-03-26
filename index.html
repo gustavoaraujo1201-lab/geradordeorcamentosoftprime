@@ -1,0 +1,1505 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="Gerador de Orçamentos Profissional - Crie orçamentos personalizados de forma rápida e fácil" />
+  <meta name="theme-color" content="#0d7de0" />
+  <title>Gerador de Orçamentos — SoftPrime</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Tela de bloqueio enquanto verifica autenticação */
+    #auth-guard {
+      position: fixed; inset: 0; z-index: 99999;
+      background: #0f172a;
+      display: flex; align-items: center; justify-content: center;
+    }
+    /* Neutraliza qualquer background branco do styles.css na sidebar */
+    nav.sidebar, .sidebar, .sidebar * { background-color: transparent; }
+    nav.sidebar, .sidebar { background: #111827 !important; }
+  </style>
+
+  <style>
+    /* ============================================================
+       RESET E BASE
+    ============================================================ */
+    * { box-sizing: border-box; }
+    body { background: #f3f6fb; margin: 0; font-family: 'Inter', sans-serif; }
+
+    /* ============================================================
+       HEADER FIXO (topo fino — só no mobile / área de conteúdo)
+    ============================================================ */
+    .header {
+      background: #111827;
+      border-bottom: none;
+      position: fixed;
+      top: 0; left: 240px; right: 0;
+      z-index: 350;
+      height: 60px;
+    }
+    .header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      height: 100%;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .logo { display: none; } /* logo fica na sidebar */
+    .site-title {
+      font-weight: 600;
+      color: rgba(255,255,255,0.75);
+      font-size: 15px;
+    }
+    .header-actions { display: flex; align-items: center; gap: 10px; }
+    #userName { color: rgba(255,255,255,0.85); font-weight: 500; font-size: 14px; white-space: nowrap; }
+
+    /* ---- Botão de perfil ---- */
+    .profile-btn {
+      display: inline-flex; align-items: center; gap: 9px;
+      padding: 6px 12px 6px 6px;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 30px; cursor: pointer; font-family: inherit;
+      transition: all 0.2s; color: rgba(255,255,255,0.85);
+      min-width: 220px; justify-content: flex-start;
+    }
+    .profile-btn:hover { background: rgba(255,255,255,0.10); border-color: rgba(255,255,255,0.2); }
+    .profile-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: #fff; font-size: 13px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; letter-spacing: -0.5px;
+    }
+    .profile-btn span#userName { font-size: 13.5px; font-weight: 600; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .btn-ghost { background: transparent !important; color: rgba(255,255,255,0.6) !important; border: none !important; }
+    .btn-ghost:hover { background: rgba(255,255,255,0.08) !important; color: #fff !important; }
+
+    /* ---- Toggle senha no modal de perfil ---- */
+    .pwd-toggle {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer; color: #9ca3af;
+      padding: 4px; display: flex; align-items: center; transition: color 0.2s;
+    }
+    .pwd-toggle:hover { color: #374151; }
+
+    /* ============================================================
+       LAYOUT PRINCIPAL COM SIDEBAR ESTILO VISITECH
+    ============================================================ */
+    .app-layout {
+      display: flex;
+      padding-top: 60px;
+      min-height: 100vh;
+    }
+
+    /* SIDEBAR — dark, fixa, estilo Visitech */
+    .sidebar {
+      width: 240px;
+      min-width: 240px;
+      background: #111827 !important;
+      border-right: none;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      display: flex;
+      flex-direction: column;
+      z-index: 300;
+      overflow-y: auto;
+    }
+
+    /* Logo dentro da sidebar */
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 20px 20px 16px;
+      border-bottom: none;
+      flex-shrink: 0;
+    }
+    .sidebar-logo-icon {
+      width: 42px; height: 42px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 4px 14px rgba(99,102,241,0.4);
+      flex-shrink: 0;
+    }
+    .sidebar-logo-text { line-height: 1.2; }
+    .sidebar-logo-text strong {
+      display: block; font-size: 15px; font-weight: 800;
+      color: #fff; letter-spacing: 0.5px;
+    }
+    .sidebar-logo-text small {
+      font-size: 11px; color: rgba(255,255,255,0.4); font-weight: 400;
+    }
+
+    .sidebar-nav { padding: 16px 12px; flex: 1; }
+    .sidebar-section-label {
+      font-size: 10px; font-weight: 700;
+      color: rgba(255,255,255,0.3);
+      text-transform: uppercase; letter-spacing: 1px;
+      padding: 0 8px; margin-bottom: 6px; margin-top: 16px;
+    }
+    .sidebar-section-label:first-child { margin-top: 0; }
+
+    .sidebar-btn {
+      display: flex; align-items: center; gap: 11px;
+      width: 100%; padding: 10px 12px; border-radius: 8px;
+      border: none; background: transparent;
+      color: rgba(255,255,255,0.55);
+      font-size: 13.5px; font-weight: 500; cursor: pointer;
+      font-family: inherit; transition: all 0.18s; text-align: left;
+      margin-bottom: 2px;
+    }
+    .sidebar-btn:hover {
+      background: rgba(255,255,255,0.07);
+      color: rgba(255,255,255,0.9);
+    }
+    .sidebar-btn.active {
+      background: linear-gradient(135deg, rgba(99,102,241,0.25), rgba(139,92,246,0.15));
+      color: #a5b4fc;
+      font-weight: 600;
+      border: 1px solid rgba(99,102,241,0.25);
+    }
+    .nav-icon { font-size: 17px; width: 22px; text-align: center; flex-shrink: 0; }
+
+    /* Perfil na base da sidebar */
+    .sidebar-footer {
+      padding: 14px 16px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      display: flex; align-items: center; gap: 10px;
+      flex-shrink: 0;
+    }
+    .sidebar-footer-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: #fff; font-size: 13px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .sidebar-footer-info { flex: 1; min-width: 0; }
+    .sidebar-footer-name {
+      font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.85);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .sidebar-footer-role {
+      font-size: 11px; color: rgba(255,255,255,0.35);
+    }
+    .sidebar-logout-btn {
+      background: none; border: none; cursor: pointer;
+      color: rgba(255,255,255,0.35); font-size: 16px; padding: 4px;
+      transition: color 0.2s; border-radius: 6px; flex-shrink: 0;
+    }
+    .sidebar-logout-btn:hover { color: #f87171; background: rgba(248,113,113,0.1); }
+
+    /* CONTEÚDO */
+    .main-content { margin-left: 240px; flex: 1; min-width: 0; }
+
+    /* TELAS (SPA) */
+    .screen { display: none; padding: 24px 20px 48px; max-width: 1100px; margin: 0 auto; }
+    .screen.active { display: block; }
+
+    /* ============================================================
+       BOTÕES
+    ============================================================ */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 10px 16px; border-radius: 7px; border: 1px solid rgba(20,30,40,0.12);
+      background: #fff; color: #1a1a1a; font-weight: 600; font-size: 14px;
+      cursor: pointer; transition: all 0.2s ease; font-family: inherit; white-space: nowrap;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(20,30,40,0.12); }
+    .btn-ghost  { background: transparent; }
+    .btn-ghost:hover { background: #f9fafb; }
+    .btn-outline:hover { border-color: #0d7de0; color: #0d7de0; }
+    .btn-primary { background: #0d7de0; color: #fff; border: none; box-shadow: 0 4px 12px rgba(13,125,224,0.25); }
+    .btn-primary:hover { background: #0a5fb8; box-shadow: 0 6px 20px rgba(13,125,224,0.35); }
+
+    /* ============================================================
+       CARDS
+    ============================================================ */
+    .card {
+      background: #fff; border-radius: 10px; padding: 24px;
+      border: 1px solid rgba(20,30,40,0.12);
+      box-shadow: 0 2px 12px rgba(20,30,40,0.08); margin-bottom: 20px;
+    }
+    .card h4 { margin: 0 0 16px; font-size: 17px; font-weight: 600; color: #1a1a1a; }
+
+    /* ============================================================
+       FORMULÁRIOS
+    ============================================================ */
+    .form-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px; }
+    .form-grid > div { position: relative; }
+    .form-grid .full { grid-column: 1 / -1; }
+
+    input, textarea, select {
+      width: 100%; padding: 11px 14px; border-radius: 7px;
+      border: 1.5px solid rgba(20,30,40,0.12); background: #fff;
+      color: #1a1a1a; font-size: 14px; font-family: inherit; transition: all 0.2s ease;
+    }
+    input::placeholder, textarea::placeholder { color: #9ca3af; }
+    input:focus, textarea:focus, select:focus {
+      outline: none; border-color: #0d7de0;
+      box-shadow: 0 0 0 3px rgba(13,125,224,0.10);
+    }
+    textarea { resize: vertical; min-height: 80px; }
+
+    .form-actions { grid-column: 1/-1; display: flex; gap: 10px; margin-top: 8px; }
+    .form-actions .btn { flex: 1; }
+
+    .logo-section { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb; }
+    .logo-section label { display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 8px; }
+
+    /* ============================================================
+       DOIS FORMULÁRIOS LADO A LADO (tela início)
+    ============================================================ */
+    .two-col-forms { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+    /* ============================================================
+       HEADER AZUL (Cadastro e Orçamentos)
+    ============================================================ */
+    .screen-hero {
+      background: linear-gradient(135deg, #0a1628 0%, #0d2b5e 55%, #0d7de0 100%);
+      border-radius: 12px; padding: 28px 28px 24px; margin-bottom: 24px;
+      position: relative; overflow: hidden;
+    }
+    .screen-hero::before {
+      content: ''; position: absolute; top: -30px; right: -30px;
+      width: 160px; height: 160px;
+      background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .screen-hero h2 { color: #fff; font-size: 22px; font-weight: 700; margin: 0 0 4px; position: relative; z-index: 1; }
+    .screen-hero p  { color: rgba(180,210,255,0.8); font-size: 13px; margin: 0; position: relative; z-index: 1; }
+    .hero-stats { display: flex; gap: 12px; margin-top: 18px; position: relative; z-index: 1; flex-wrap: wrap; }
+    .hero-stat { background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.13); border-radius: 10px; padding: 10px 20px; }
+    .hero-stat-value { color: #fff; font-size: 20px; font-weight: 700; }
+    .hero-stat-label { color: rgba(180,210,255,0.7); font-size: 11px; margin-top: 2px; }
+
+    /* ============================================================
+       LISTAS DE CADASTRO
+    ============================================================ */
+    .cadastro-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+    .list { list-style: none; padding: 0; margin: 0; }
+    .list li {
+      padding: 14px 16px; border-radius: 8px;
+      border: 1px solid rgba(20,30,40,0.10); margin-bottom: 10px;
+      background: #fff; display: flex; justify-content: space-between;
+      align-items: flex-start; gap: 12px; transition: all 0.2s ease;
+    }
+    .list li:hover { box-shadow: 0 2px 12px rgba(20,30,40,0.08); border-color: #d1d5db; }
+    .list li strong { display: block; font-size: 14px; margin-bottom: 3px; color: #1a1a1a; }
+    .list li .meta { color: #6b7278; font-size: 13px; }
+    .list li .quote-actions { display: flex; gap: 6px; flex-wrap: wrap; flex-shrink: 0; }
+    .list li button { font-size: 13px; padding: 6px 11px; }
+
+    /* ============================================================
+       TELA ORÇAMENTOS — layout dois cols
+    ============================================================ */
+    .quotes-layout { display: grid; grid-template-columns: 240px 1fr; gap: 20px; align-items: flex-start; }
+
+    .qs-filters-card {
+      background: #fff; border: 1px solid rgba(20,30,40,0.12);
+      border-radius: 10px; padding: 18px;
+      box-shadow: 0 2px 12px rgba(20,30,40,0.08); margin-bottom: 14px;
+    }
+    .qs-filter-title { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; }
+
+    .sp-filter-chips { display: flex; flex-direction: column; gap: 6px; }
+    .sp-chip {
+      padding: 5px 12px; background: #fff; border: 1.5px solid #e2e8f0;
+      border-radius: 20px; font-size: 12px; font-weight: 500; color: #475569;
+      cursor: pointer; transition: all 0.15s; font-family: inherit;
+      white-space: normal; word-break: break-word; text-align: left;
+      width: 100%; display: block;
+    }
+    .sp-chip:hover { border-color: #0d7de0; color: #0d7de0; }
+    .sp-chip.active { background: #0d7de0; color: #fff; border-color: #0d7de0; box-shadow: 0 2px 8px rgba(13,125,224,0.25); }
+
+    .sp-filter-clear {
+      margin-top: 10px; padding: 7px 14px; background: #fee2e2; color: #dc2626;
+      border: 1px solid #fecaca; border-radius: 8px; font-size: 12px; font-weight: 600;
+      cursor: pointer; font-family: inherit; width: 100%;
+    }
+    .sp-filter-clear:hover { background: #fecaca; }
+
+    .qs-search-card {
+      background: #fff; border: 1px solid rgba(20,30,40,0.12);
+      border-radius: 10px; padding: 14px 16px 10px; margin-bottom: 14px;
+      box-shadow: 0 2px 12px rgba(20,30,40,0.08);
+    }
+    .sp-search-box {
+      display: flex; align-items: center; background: #f9fafb;
+      border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0 14px; gap: 8px; transition: all 0.2s;
+    }
+    .sp-search-box:focus-within { border-color: #0d7de0; box-shadow: 0 0 0 3px rgba(13,125,224,0.10); background: #fff; }
+    .sp-search-box > span { color: #94a3b8; font-size: 15px; flex-shrink: 0; }
+    .sp-search-input {
+      flex: 1; border: none; outline: none; background: transparent;
+      padding: 11px 0; font-size: 13.5px; color: #1e293b; font-family: inherit;
+    }
+    .sp-search-input::placeholder { color: #94a3b8; }
+    .sp-search-clear { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 13px; padding: 3px 5px; border-radius: 4px; display: none; }
+    .sp-search-clear:hover { color: #475569; background: #f1f5f9; }
+    .sp-results-info { margin-top: 8px; font-size: 11.5px; color: #94a3b8; min-height: 16px; }
+
+    .sp-empty {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 60px 20px; color: #94a3b8; text-align: center; gap: 12px;
+      background: #fff; border-radius: 10px; border: 1px solid rgba(20,30,40,0.10);
+    }
+    .sp-empty-icon { width: 64px; height: 64px; background: #f8fafc; border: 2px dashed #e2e8f0; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+    .sp-empty h4 { margin: 0; font-size: 15px; color: #64748b; font-weight: 600; }
+    .sp-empty p  { margin: 0; font-size: 13px; }
+
+    .sp-card {
+      background: #fff; border: 1.5px solid #e8edf5; border-radius: 12px;
+      padding: 16px 18px; margin-bottom: 10px; cursor: pointer;
+      transition: all 0.22s; position: relative; overflow: hidden;
+    }
+    .sp-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: linear-gradient(180deg,#0d7de0,#0a5fb8); border-radius: 3px 0 0 3px; transform: scaleY(0); transition: transform 0.22s; }
+    .sp-card:hover { border-color: #bfdbfe; box-shadow: 0 4px 20px rgba(13,125,224,0.10); transform: translateX(3px); }
+    .sp-card:hover::before { transform: scaleY(1); }
+    .sp-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .sp-card-num { font-size: 13px; font-weight: 700; color: #0d7de0; }
+    .sp-card-total { background: linear-gradient(135deg,#ecfdf5,#d1fae5); color: #065f46; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 20px; border: 1px solid #a7f3d0; }
+    .sp-card-parties { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+    .sp-card-party { display: flex; align-items: center; gap: 6px; font-size: 12.5px; }
+    .sp-card-party-label { color: #94a3b8; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; min-width: 32px; }
+    .sp-card-party-name { color: #1e293b; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 380px; }
+    .sp-card-footer { display: flex; align-items: center; justify-content: space-between; }
+    .sp-card-date { font-size: 11px; color: #94a3b8; }
+    .sp-card-btns { display: flex; gap: 4px; }
+    .sp-card-btn { padding: 5px 9px; font-size: 11px; font-weight: 600; border-radius: 6px; border: 1px solid #e2e8f0; background: #f8fafc; color: #475569; cursor: pointer; transition: all 0.15s; font-family: inherit; }
+    .sp-card-btn:hover { background: #e2e8f0; color: #1e293b; }
+    .sp-card-btn.view { color: #0d7de0; border-color: #bfdbfe; background: #eff6ff; }
+    .sp-card-btn.view:hover { background: #dbeafe; }
+    .sp-card-btn.del { color: #dc2626; border-color: #fecaca; background: #fff5f5; }
+    .sp-card-btn.del:hover { background: #fee2e2; }
+
+    /* ============================================================
+       ITENS DO ORÇAMENTO
+    ============================================================ */
+    .items-wrap { margin-top: 16px; }
+    .items-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+    .items-table thead th { font-weight: 600; text-align: left; padding: 12px 10px; color: #6b7278; border-bottom: 2px solid #f3f4f6; font-size: 13px; text-transform: uppercase; letter-spacing: 0.3px; }
+    .items-table td { padding: 12px 10px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+    .items-table input { padding: 9px 12px; font-size: 14px; }
+    .items-table td:nth-child(4) { text-align: right; font-weight: 600; }
+    .items-table .del-item { background: #fee; color: #dc2626; border: 1px solid #fecaca; padding: 6px 10px; border-radius: 5px; cursor: pointer; font-weight: 600; }
+    .items-table .del-item:hover { background: #fecaca; }
+
+    .row-between { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; gap: 16px; flex-wrap: wrap; }
+    .total { font-size: 18px; font-weight: 700; color: #0d7de0; }
+
+    .generate-wrap { margin: 24px 0 32px; }
+    .btn-generate { width: 100%; padding: 16px 24px; border-radius: 10px; font-size: 17px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 8px 24px rgba(13,125,224,0.3); }
+    .btn-generate:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(13,125,224,0.4); }
+
+    /* Oculta seção legada */
+    .section-quotes-main { display: none !important; }
+    #issuerCancelBtn, #clientCancelBtn, #cancelEditBtn { display: none; }
+
+    /* ============================================================
+       MODAL
+    ============================================================ */
+    .modal { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); z-index: 1000; padding: 20px; }
+    .modal.hidden { display: none; }
+    .modal-box { width: 100%; max-width: 900px; max-height: 90vh; overflow-y: auto; background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); position: relative; }
+    .modal-close { position: absolute; right: 16px; top: 16px; border: none; background: #f3f4f6; width: 32px; height: 32px; border-radius: 50%; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .modal-close:hover { background: #e5e7eb; }
+    .modal-actions { margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end; }
+
+    /* ============================================================
+       FOOTER
+    ============================================================ */
+    .footer { text-align: center; color: #6b7278; padding: 24px 16px; font-size: 14px; margin-top: 40px; border-top: none !important; }
+
+    /* ============================================================
+       RESPONSIVO
+    ============================================================ */
+    /* ============================================================
+       TABLET (960px)
+    ============================================================ */
+    @media (max-width: 960px) {
+      .header { left: 72px; }
+      .sidebar { width: 72px; min-width: 72px; }
+      .sidebar-btn span:not(.nav-icon) { display: none; }
+      .sidebar-section-label { display: none; }
+      .sidebar-btn { justify-content: center; padding: 10px; }
+      .sidebar-brand { padding: 14px; justify-content: center; }
+      .sidebar-logo-text { display: none; }
+      .sidebar-footer-info { display: none; }
+      .main-content { margin-left: 72px; }
+      .two-col-forms, .cadastro-grid { grid-template-columns: 1fr; }
+      .quotes-layout { grid-template-columns: 1fr; }
+      .form-grid { grid-template-columns: 1fr; }
+      .screen { padding: 20px 16px 40px; }
+      .card { padding: 18px; }
+      .items-table thead th:nth-child(1) { width: 50%; }
+    }
+
+    /* ============================================================
+       MOBILE (600px)
+    ============================================================ */
+    @media (max-width: 600px) {
+      /* Header */
+      .header { left: 0 !important; right: 0 !important; height: 60px !important; z-index: 9000 !important; }
+      .header-row { padding: 0 16px; display: flex !important; align-items: center !important; justify-content: space-between !important; width: 100%; }
+      .brand { display: flex !important; align-items: center !important; flex-shrink: 0; }
+      .header-actions { display: flex !important; align-items: center !important; flex-shrink: 0; }
+      .profile-btn { display: none !important; }
+      .app-layout { padding-top: 60px !important; }
+
+      /* Sidebar */
+      .sidebar {
+        display: flex !important;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        z-index: 9100;
+        width: 260px !important;
+        min-width: 260px !important;
+      }
+      .sidebar.mobile-open { transform: translateX(0); }
+      .sidebar-btn span:not(.nav-icon) { display: inline !important; }
+      .sidebar-section-label { display: block !important; }
+      .sidebar-btn { justify-content: flex-start !important; padding: 12px 16px !important; font-size: 15px !important; }
+      .sidebar-brand { padding: 20px 16px !important; justify-content: flex-start !important; }
+      .sidebar-logo-text { display: block !important; }
+
+      /* Overlay */
+      .sidebar-overlay {
+        display: block !important;
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,0.55);
+        z-index: 9050; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+      }
+      .sidebar-overlay.visible { opacity: 1; pointer-events: all; }
+
+      /* Hamburguer */
+      .hamburger-btn {
+        display: flex !important;
+        align-items: center; justify-content: center;
+        background: none; border: none; cursor: pointer;
+        color: #fff; padding: 10px; border-radius: 8px;
+        -webkit-tap-highlight-color: transparent;
+        flex-shrink: 0;
+      }
+      .hamburger-btn:active { background: rgba(255,255,255,0.1); }
+      .mobile-header-title {
+        display: block !important;
+        font-size: 18px; font-weight: 800;
+        color: #fff; letter-spacing: 1px;
+        text-transform: uppercase; margin-left: 4px;
+      }
+
+      /* Perfil no menu mobile */
+      .sidebar-mobile-profile { display: block !important; }
+      .sidebar-profile-info {
+        display: flex; align-items: center; gap: 12px;
+        padding: 12px 16px 8px;
+      }
+      .sidebar-profile-avatar {
+        width: 40px; height: 40px; border-radius: 50%;
+        background: linear-gradient(135deg, #7c3aed, #4f46e5);
+        display: flex; align-items: center; justify-content: center;
+        color: #fff; font-weight: 700; font-size: 16px; flex-shrink: 0;
+      }
+      .sidebar-profile-name {
+        font-size: 14px; font-weight: 600; color: #fff;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .sidebar-logout-mobile { color: #f87171 !important; }
+      .sidebar-logout-mobile:active { background: rgba(248,113,113,0.1) !important; }
+
+      /* Conteúdo */
+      .main-content { margin-left: 0; position: relative; z-index: 1; }
+      .screen { padding: 14px 10px 60px; }
+      .card { padding: 14px; margin-bottom: 14px; border-radius: 10px; }
+      .card h4 { font-size: 16px; margin-bottom: 12px; }
+
+      /* Formulários */
+      .form-grid { grid-template-columns: 1fr; gap: 10px; }
+      .two-col-forms, .cadastro-grid { grid-template-columns: 1fr; gap: 12px; }
+      .quotes-layout { grid-template-columns: 1fr; }
+
+      /* Tabela de itens — scroll horizontal no mobile */
+      .items-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .items-table { min-width: 480px; font-size: 13px; }
+      .items-table thead th { padding: 10px 8px; font-size: 11px; }
+      .items-table td { padding: 10px 8px; }
+      .items-table input { padding: 8px; font-size: 13px; }
+
+      /* Botão gerar orçamento */
+      .btn-generate { font-size: 15px; padding: 14px 20px; }
+      .generate-wrap { margin: 16px 0 20px; }
+
+      /* Modal */
+      .modal { padding: 10px; align-items: flex-end; }
+      .modal-box { 
+        padding: 16px; 
+        border-radius: 16px 16px 0 0; 
+        max-height: 92vh;
+        margin: 0;
+      }
+      .modal-actions { flex-direction: column; }
+      .modal-actions .btn { width: 100%; justify-content: center; }
+
+      /* Hero */
+      .screen-hero { padding: 16px; border-radius: 10px; }
+      .screen-hero h2 { font-size: 18px; }
+      .hero-stats { gap: 8px; }
+      .hero-stat { padding: 10px 12px; }
+      .hero-stat-value { font-size: 18px; }
+
+      /* Inputs maiores para toque */
+      input, select, textarea { 
+        font-size: 16px !important; /* previne zoom no iOS */
+        padding: 12px 14px;
+        min-height: 46px;
+      }
+      select { min-height: 46px; }
+
+      /* Botões maiores para toque */
+      .btn { min-height: 44px; padding: 10px 16px; }
+      .btn-primary { min-height: 48px; }
+      .sp-card-btn { padding: 8px 12px; font-size: 12px; }
+      .sp-card-party-name { max-width: 180px; }
+
+      /* Row between */
+      .row-between { flex-direction: column; align-items: flex-start; gap: 10px; }
+      .total { font-size: 16px; }
+
+      /* Footer */
+      .footer { padding: 16px; font-size: 13px; }
+    }
+
+    /* Desktop padrão */
+    .hamburger-btn { display: none; }
+    .sidebar-overlay { display: none; }
+    .sidebar-mobile-profile { display: none; }
+    .mobile-header-title { display: none; }
+  </style>
+</head>
+<body>
+  <div id="auth-guard"></div>
+
+
+  <!-- ========== HEADER (barra topo do conteúdo) ========== -->
+  <header class="header">
+    <div class="header-row">
+      <div class="brand">
+        <button class="hamburger-btn" id="hamburgerBtn" title="Menu">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+        <span class="mobile-header-title">Soft<span style="color:#7c3aed;">Prime</span></span>
+      </div>
+      <div class="header-actions">
+        <button class="profile-btn" id="profileBtn" title="Meu Perfil">
+          <div class="profile-avatar" id="profileAvatar">?</div>
+          <span id="userName"></span>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="opacity:0.4;flex-shrink:0;">
+            <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========== APP LAYOUT ========== -->
+  <!-- Overlay mobile -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div class="app-layout">
+
+    <!-- SIDEBAR ESTILO VISITECH -->
+    <nav class="sidebar">
+
+      <!-- Logo / Brand -->
+      <div class="sidebar-brand">
+        <div class="sidebar-logo-text">
+          <strong style="font-size:24px;letter-spacing:0.5px;">SoftPrime</strong>
+          <small style="font-size:13px;">Gerador de Orçamentos</small>
+        </div>
+      </div>
+
+      <!-- Navegação -->
+      <div class="sidebar-nav">
+        <div class="sidebar-section-label">Menu</div>
+
+        <button class="sidebar-btn active" id="navHome" onclick="showScreen('home')">
+          <span class="nav-icon">🏠</span>
+          <span>Início</span>
+        </button>
+
+        <button class="sidebar-btn" id="navCadastro" onclick="showScreen('cadastro')">
+          <span class="nav-icon">📋</span>
+          <span>Cadastro</span>
+        </button>
+
+        <button class="sidebar-btn" id="navOrcamentos" onclick="showScreen('orcamentos')">
+          <span class="nav-icon">💼</span>
+          <span>Orçamentos Salvos</span>
+        </button>
+
+        <!-- Perfil mobile — só aparece no celular -->
+        <div class="sidebar-mobile-profile" id="sidebarMobileProfile">
+          <div class="sidebar-section-label" style="margin-top:24px;">Conta</div>
+          <div class="sidebar-profile-info">
+            <div class="sidebar-profile-avatar" id="sidebarProfileAvatar">?</div>
+            <div class="sidebar-profile-name" id="sidebarProfileName">Carregando...</div>
+          </div>
+          <button class="sidebar-btn" onclick="document.getElementById('pdProfileBtn') && document.getElementById('pdProfileBtn').click(); if(window.innerWidth<=600){ document.querySelector('.sidebar').classList.remove('mobile-open'); document.getElementById('sidebarOverlay').classList.remove('visible'); }">
+            <span class="nav-icon">👤</span>
+            <span>Meu Perfil</span>
+          </button>
+          <button class="sidebar-btn sidebar-logout-mobile" onclick="if(window.authManager) window.authManager.signOut();">
+            <span class="nav-icon">🚪</span>
+            <span>Sair da conta</span>
+          </button>
+        </div>
+      </div>
+
+    </nav>
+
+    <!-- CONTEÚDO -->
+    <div class="main-content">
+
+      <!-- ====================================================
+           TELA: INÍCIO
+      ==================================================== -->
+      <div id="screenHome" class="screen active">
+
+        <!-- Card: Novo Orçamento -->
+        <div class="card">
+          <h4>💼 Novo Orçamento</h4>
+          <div class="form-grid" style="margin-bottom:20px;">
+            <div>
+              <label for="selectIssuer" style="display:block;margin-bottom:6px;font-weight:600;font-size:14px;color:#4b5563;">Emissor *</label>
+              <select id="selectIssuer" required><option value="">-- selecione o emissor --</option></select>
+            </div>
+            <div>
+              <label for="selectClient" style="display:block;margin-bottom:6px;font-weight:600;font-size:14px;color:#4b5563;">Cliente *</label>
+              <select id="selectClient" required><option value="">-- selecione o cliente --</option></select>
+            </div>
+          </div>
+          <div class="form-grid" style="margin-bottom:20px;padding:16px;background:#f9fafb;border-radius:8px;">
+            <div>
+              <label for="quoteNumber" style="display:block;margin-bottom:6px;font-weight:600;font-size:14px;color:#4b5563;">Número do Orçamento</label>
+              <input id="quoteNumber" placeholder="Gerado automaticamente" readonly />
+            </div>
+            <div>
+              <label for="quoteDate" style="display:block;margin-bottom:6px;font-weight:600;font-size:14px;color:#4b5563;">Data</label>
+              <input id="quoteDate" type="date" placeholder="Data atual" />
+            </div>
+          </div>
+          <div class="items-wrap">
+            <h4 style="margin-bottom:12px;">📋 Itens do Orçamento</h4>
+            <div style="overflow-x:auto;">
+              <table class="items-table" id="itemsTable">
+                <thead><tr>
+                  <th style="width:50%">Descrição</th>
+                  <th style="width:12%">Qtd</th>
+                  <th style="width:16%">Unit. (R$)</th>
+                  <th style="width:16%">Total (R$)</th>
+                  <th style="width:6%"></th>
+                </tr></thead>
+                <tbody id="itemsBody"></tbody>
+              </table>
+            </div>
+            <div class="row-between" style="margin-top:16px;">
+              <button id="addItemBtn" class="btn" style="border-color:#d1e7ff;color:#0d7de0;background:#f0f7ff;">+ Adicionar Item</button>
+              <div class="total">Total: R$ <strong><span id="grandTotal">0.00</span></strong></div>
+            </div>
+          </div>
+          <div style="margin-top:20px;">
+            <label for="notes" style="display:block;margin-bottom:8px;font-weight:600;font-size:14px;color:#4b5563;">📌 Observações (opcional)</label>
+            <textarea id="notes" rows="4" placeholder="Adicione observações, condições de pagamento, prazo de validade, etc."></textarea>
+          </div>
+        </div>
+
+        <div class="generate-wrap">
+          <button id="saveQuoteBtn" class="btn btn-primary btn-generate">📄 Gerar Orçamento</button>
+          <button id="cancelEditBtn" class="btn btn-outline" style="width:100%;margin-top:12px;">Cancelar Edição</button>
+        </div>
+
+        <!-- Seção oculta — mantida para compatibilidade com app.js -->
+        <section class="card section-quotes-main">
+          <ul id="quotesList" class="list"></ul>
+          <input type="text" id="quotesSearch" style="display:none;" />
+          <button id="clearSearch" style="display:none;"></button>
+          <div id="filterResultsCount" style="display:none;"></div>
+        </section>
+      </div>
+
+      <!-- ====================================================
+           TELA: CADASTRO
+      ==================================================== -->
+      <div id="screenCadastro" class="screen">
+        <div class="screen-hero">
+          <h2>📋 Cadastro</h2>
+          <p>Gerencie seus emissores e clientes cadastrados</p>
+          <div class="hero-stats">
+            <div class="hero-stat">
+              <div class="hero-stat-value" id="totalIssuers">0</div>
+              <div class="hero-stat-label">Emissores</div>
+            </div>
+            <div class="hero-stat">
+              <div class="hero-stat-value" id="totalClients">0</div>
+              <div class="hero-stat-label">Clientes</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Logo do Emissor — largura total, acima dos dois formulários -->
+        <div class="card" style="margin-bottom:20px;">
+          <h4>🖼️ Logotipo do Emissor</h4>
+          <div class="logo-section" style="margin-top:8px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+            <div>
+              <label for="issuerLogo" style="font-size:13px;color:#6b7280;">Imagem até 4mb (PNG, JPG)</label>
+              <input type="file" id="issuerLogo" accept="image/*" aria-label="Logotipo do emissor" style="margin-top:8px;display:block;" />
+            </div>
+            <div id="issuerLogoPreview" style="display:none;align-items:center;gap:10px;">
+              <img id="issuerLogoImg" src="" alt="Logo preview" style="max-height:72px;max-width:220px;border-radius:6px;border:1px solid #e5e7eb;padding:4px;" />
+              <button type="button" id="removeLogoBtn" style="color:#dc2626;background:none;border:none;cursor:pointer;font-size:13px;white-space:nowrap;">✕ Remover</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="cadastro-grid">
+          <!-- Coluna Emissor: form + lista -->
+          <div>
+            <!-- Form Emissor -->
+            <div class="card" style="margin-bottom:16px;">
+              <h4>📝 Dados do Emissor</h4>
+              <form id="issuerForm" class="form-grid" autocomplete="off" style="margin-top:12px;">
+                <div class="full"><input id="issuerName" placeholder="Nome / Razão social *" required aria-label="Nome do emissor" /></div>
+                <div><input id="issuerCnpjCpf" placeholder="CPF / CNPJ" aria-label="CPF ou CNPJ do emissor" /></div>
+                <div><input id="issuerPhone" placeholder="Telefone" type="tel" aria-label="Telefone do emissor" /></div>
+                <div class="full"><textarea id="issuerAddress" placeholder="Endereço completo" rows="2" aria-label="Endereço do emissor"></textarea></div>
+                <div class="form-actions">
+                  <button id="issuerSubmitBtn" class="btn btn-primary" type="submit">Adicionar Emissor</button>
+                  <button id="issuerCancelBtn" class="btn btn-outline" type="button">Cancelar</button>
+                </div>
+              </form>
+            </div>
+            <!-- Lista Emissores -->
+            <div class="card" style="margin-bottom:0;">
+              <h4>🏢 Emissores Cadastrados</h4>
+              <ul id="issuerList" class="list"></ul>
+            </div>
+          </div>
+
+          <!-- Coluna Cliente: form + lista -->
+          <div>
+            <!-- Form Cliente -->
+            <div class="card" style="margin-bottom:16px;">
+              <h4>👤 Dados do Cliente</h4>
+              <form id="clientForm" class="form-grid" autocomplete="off" style="margin-top:12px;">
+                <div class="full"><input id="clientName" placeholder="Nome / Empresa *" required aria-label="Nome do cliente" /></div>
+                <div><input id="clientCnpjCpf" placeholder="CPF / CNPJ" aria-label="CPF ou CNPJ do cliente" /></div>
+                <div><input id="clientPhone" placeholder="Telefone" type="tel" aria-label="Telefone do cliente" /></div>
+                <div class="full"><textarea id="clientAddress" placeholder="Endereço completo" rows="2" aria-label="Endereço do cliente"></textarea></div>
+                <div class="form-actions">
+                  <button id="clientSubmitBtn" class="btn btn-primary" type="submit">Adicionar Cliente</button>
+                  <button id="clientCancelBtn" class="btn btn-outline" type="button">Cancelar</button>
+                </div>
+              </form>
+            </div>
+            <!-- Lista Clientes -->
+            <div class="card" style="margin-bottom:0;">
+              <h4>👤 Clientes Cadastrados</h4>
+              <ul id="clientList" class="list"></ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================
+           TELA: ORÇAMENTOS SALVOS
+      ==================================================== -->
+      <div id="screenOrcamentos" class="screen">
+        <div class="screen-hero">
+          <h2>💼 Orçamentos Salvos</h2>
+          <p>Gerencie todos os seus orçamentos</p>
+        </div>
+
+        <div class="quotes-layout">
+          <!-- Sidebar filtros -->
+          <div>
+            <div class="qs-filters-card">
+              <div class="qs-filter-title">🏢 Filtrar por Emissor</div>
+              <div class="sp-filter-chips" id="spIssuerChips"></div>
+            </div>
+            <div class="qs-filters-card">
+              <div class="qs-filter-title">👤 Filtrar por Cliente</div>
+              <div class="sp-filter-chips" id="spClientChips"></div>
+            </div>
+            <button class="sp-filter-clear" id="spFilterClear" style="display:none;">✕ Limpar filtros</button>
+          </div>
+
+          <!-- Lista -->
+          <div>
+            <div class="qs-search-card">
+              <div class="sp-search-box">
+                <span>🔍</span>
+                <input type="text" class="sp-search-input" id="spSearch" placeholder="Pesquisar por número, cliente, emissor, valor (ex: 250)..." autocomplete="off" />
+                <button class="sp-search-clear" id="spClear">✕</button>
+              </div>
+              <div class="sp-results-info" id="spResultsInfo"></div>
+            </div>
+            <div id="spList">
+              <div class="sp-empty">
+                <div class="sp-empty-icon">📭</div>
+                <h4>Nenhum orçamento ainda</h4>
+                <p>Crie seu primeiro orçamento na tela Início</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="footer">
+        <p>© 2026 Desenvolvido por <strong>SoftPrime</strong> - Todos os direitos reservados</p>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ========== DROPDOWN MENU PERFIL (estilo Visitech) ========== -->
+  <div id="profileDropdown" style="
+    display:none; position:fixed; z-index:9998;
+    background:#1f2937; border:1px solid rgba(255,255,255,0.10);
+    border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.45);
+    min-width:220px; overflow:hidden;
+    animation: dropIn 0.18s cubic-bezier(0.22,1,0.36,1) both;
+  ">
+    <style>
+      @keyframes dropIn { from { opacity:0; transform:translateY(-8px) scale(0.97); } to { opacity:1; transform:translateY(0) scale(1); } }
+      .pd-header { padding:14px 16px; background:linear-gradient(135deg,#6366f1,#8b5cf6); display:flex; align-items:center; gap:10px; }
+      .pd-avatar { width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.2);color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:2px solid rgba(255,255,255,0.3); }
+      .pd-name { font-size:13.5px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+      .pd-email { font-size:11px;color:rgba(255,255,255,0.65);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px; }
+      .pd-divider { height:1px;background:rgba(255,255,255,0.07);margin:0; }
+      .pd-item { display:flex;align-items:center;gap:12px;width:100%;padding:12px 16px;background:none;border:none;font-family:inherit;font-size:13.5px;font-weight:500;color:rgba(255,255,255,0.75);cursor:pointer;transition:all 0.15s;text-align:left; }
+      .pd-item:hover { background:rgba(255,255,255,0.06);color:#fff; }
+      .pd-item svg { flex-shrink:0;opacity:0.6; }
+      .pd-item:hover svg { opacity:1; }
+      .pd-item.danger { color:#f87171; }
+      .pd-item.danger:hover { background:rgba(248,113,113,0.08);color:#fca5a5; }
+      .pd-item.danger svg { opacity:0.7; }
+    </style>
+
+    <!-- Cabeçalho com gradiente -->
+    <div class="pd-header">
+      <div class="pd-avatar" id="pdAvatar">?</div>
+      <div style="min-width:0;">
+        <div class="pd-name" id="pdName">Carregando...</div>
+        <div class="pd-email" id="pdEmail"></div>
+      </div>
+    </div>
+
+    <div class="pd-divider"></div>
+
+    <!-- Opção: Meu Perfil -->
+    <button class="pd-item" id="pdProfileBtn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      Meu Perfil
+    </button>
+
+    <div class="pd-divider"></div>
+
+    <!-- Opção: Sair -->
+    <button class="pd-item danger" id="logoutBtn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sair da conta
+    </button>
+  </div>
+
+  <!-- ========== MODAL DE PERFIL ========== -->
+  <div id="profileModal" class="modal hidden" role="dialog" aria-label="Meu Perfil">
+    <div class="modal-box" style="max-width:480px;">
+      <button class="modal-close" id="closeProfileModal">×</button>
+
+      <!-- Header do perfil com gradiente -->
+      <div style="margin:-24px -24px 24px;padding:28px 24px 24px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:12px 12px 0 0;display:flex;align-items:center;gap:16px;">
+        <div id="profileModalAvatar" style="width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,0.2);color:#fff;font-size:24px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:2px solid rgba(255,255,255,0.35);">?</div>
+        <div>
+          <div id="profileModalName" style="font-size:18px;font-weight:700;color:#fff;margin-bottom:3px;">Carregando...</div>
+          <div id="profileModalEmail" style="font-size:13px;color:rgba(255,255,255,0.7);"></div>
+        </div>
+      </div>
+
+      <!-- Seção: Alterar Nome de Usuário -->
+      <div style="margin-bottom:20px;">
+        <h4 style="font-size:13px;font-weight:700;color:#6366f1;margin:0 0 10px;text-transform:uppercase;letter-spacing:0.5px;">✏️ Nome de Usuário</h4>
+        <div style="display:flex;gap:10px;">
+          <input type="text" id="newUsernameInput" placeholder="Novo nome de usuário" style="flex:1;" />
+          <button class="btn btn-primary" id="saveUsernameBtn" style="white-space:nowrap;padding:10px 16px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;">Salvar</button>
+        </div>
+        <div id="usernameMsg" style="margin-top:8px;font-size:13px;display:none;padding:8px 12px;border-radius:6px;"></div>
+      </div>
+
+      <div style="border-top:1px solid #f1f5f9;margin-bottom:20px;"></div>
+
+      <!-- Seção: Alterar Senha -->
+      <div style="margin-bottom:8px;">
+        <h4 style="font-size:13px;font-weight:700;color:#6366f1;margin:0 0 10px;text-transform:uppercase;letter-spacing:0.5px;">🔑 Alterar Senha</h4>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="position:relative;">
+            <input type="password" id="newPasswordInput" placeholder="Nova senha (mínimo 6 caracteres)" style="width:100%;padding-right:44px;" />
+            <button type="button" class="pwd-toggle" onclick="togglePwd('newPasswordInput',this)" title="Mostrar/ocultar">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <div style="position:relative;">
+            <input type="password" id="confirmPasswordInput" placeholder="Confirmar nova senha" style="width:100%;padding-right:44px;" />
+            <button type="button" class="pwd-toggle" onclick="togglePwd('confirmPasswordInput',this)" title="Mostrar/ocultar">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <button class="btn btn-primary" id="savePasswordBtn" style="width:100%;padding:12px;">🔒 Alterar Senha</button>
+        </div>
+        <div id="passwordMsg" style="margin-top:10px;font-size:13px;display:none;padding:8px 12px;border-radius:6px;"></div>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="previewModal" class="modal hidden" role="dialog">
+    <div class="modal-box">
+      <button id="closePreview" class="modal-close">×</button>
+      <h3 style="margin-bottom:20px;font-size:20px;">Visualização do Orçamento</h3>
+      <div id="previewArea" style="border:1px solid #e5e7eb;padding:20px;border-radius:8px;background:#fff;"></div>
+      <div class="modal-actions">
+        <button id="printBtn" class="btn btn-primary">🖨️ Imprimir / Salvar PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="auth.js"></script>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const logoutBtn = document.getElementById('logoutBtn');
+      if (logoutBtn) {
+        logoutBtn.onclick = async (e) => {
+          e.preventDefault();
+          if (!confirm('Deseja realmente sair?')) return;
+          await window.authManager.signOut();
+        };
+      }
+
+      // Fecha modais com a tecla Esc
+      document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        const previewModal = document.getElementById('previewModal');
+        if (previewModal && !previewModal.classList.contains('hidden')) {
+          previewModal.classList.add('hidden');
+          return;
+        }
+        const profileModal = document.getElementById('profileModal');
+        if (profileModal && !profileModal.classList.contains('hidden')) {
+          profileModal.classList.add('hidden');
+        }
+      });
+    });
+  </script>
+
+  <script src="app.js"></script>
+
+  <script>
+    // ===================================================
+    // NAVEGAÇÃO SPA
+    // ===================================================
+    function showScreen(name) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+
+      const id = 'screen' + name.charAt(0).toUpperCase() + name.slice(1);
+      const el = document.getElementById(id);
+      if (el) el.classList.add('active');
+
+      const navId = 'nav' + name.charAt(0).toUpperCase() + name.slice(1);
+      const navEl = document.getElementById(navId);
+      if (navEl) navEl.classList.add('active');
+
+      window.scrollTo(0, 0);
+
+      if (name === 'orcamentos') renderPanel();
+      if (name === 'cadastro')   renderCadastroStats();
+    }
+
+    // ===================================================
+    // ESTATÍSTICAS DO CADASTRO
+    // ===================================================
+    function renderCadastroStats() {
+      if (typeof store === 'undefined') return;
+      const ti = document.getElementById('totalIssuers');
+      const tc = document.getElementById('totalClients');
+      if (ti) ti.textContent = (store.issuers || []).length;
+      if (tc) tc.textContent = (store.clients || []).length;
+    }
+
+    // Após adicionar emissor ou cliente, atualiza stats
+    document.addEventListener('click', e => {
+      if (e.target && (e.target.id === 'issuerSubmitBtn' || e.target.id === 'clientSubmitBtn')) {
+        setTimeout(renderCadastroStats, 300);
+      }
+    });
+
+    // Ao clicar em Editar emissor ou cliente: garante que a tela Cadastro está ativa
+    // e depois faz scroll até o formulário correspondente
+    document.addEventListener('click', e => {
+      const btn = e.target.closest ? e.target.closest('.edit-issuer, .edit-client') : null;
+      if (!btn) return;
+      const isCadastroActive = document.getElementById('screenCadastro')?.classList.contains('active');
+      if (!isCadastroActive) {
+        showScreen('cadastro');
+      }
+      // Scroll suave até o formulário após breve delay
+      setTimeout(() => {
+        const formEl = btn.classList.contains('edit-issuer')
+          ? document.getElementById('issuerForm')
+          : document.getElementById('clientForm');
+        if (formEl) formEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 150);
+    }, true); // capture phase — roda antes do listener do app.js
+
+    // ===================================================
+    // ORÇAMENTOS SALVOS
+    // ===================================================
+    const spSearch       = document.getElementById('spSearch');
+    const spClear        = document.getElementById('spClear');
+    const spList         = document.getElementById('spList');
+    const spInfo         = document.getElementById('spResultsInfo');
+    const spIssuerChips  = document.getElementById('spIssuerChips');
+    const spClientChips  = document.getElementById('spClientChips');
+    const spFilterClear  = document.getElementById('spFilterClear');
+
+    let spQuery = '';
+    let activeIssuerId = null;
+    let activeClientId = null;
+
+    function norm(s) { return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+    function fmtDate(iso) { return iso ? new Date(iso).toLocaleDateString('pt-BR') : ''; }
+    function fmtMoney(v) { return 'R$ ' + Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+    spSearch.addEventListener('input', () => {
+      spQuery = spSearch.value;
+      spClear.style.display = spQuery ? 'block' : 'none';
+      renderList();
+    });
+    spClear.addEventListener('click', () => {
+      spQuery = ''; spSearch.value = '';
+      spClear.style.display = 'none';
+      renderList();
+    });
+    if (spFilterClear) {
+      spFilterClear.addEventListener('click', () => {
+        activeIssuerId = null; activeClientId = null;
+        document.querySelectorAll('.sp-chip').forEach(c => c.classList.remove('active'));
+        spFilterClear.style.display = 'none';
+        renderList();
+      });
+    }
+
+    function renderFilterChips() {
+      if (!spIssuerChips || !spClientChips || typeof store === 'undefined') return;
+      const ic = {}, cc = {};
+      (store.quotes||[]).forEach(q => { ic[q.issuerId]=(ic[q.issuerId]||0)+1; cc[q.clientId]=(cc[q.clientId]||0)+1; });
+
+      spIssuerChips.innerHTML = '';
+      (store.issuers||[]).forEach(iss => {
+        if (!ic[iss.id]) return;
+        const chip = document.createElement('button');
+        chip.className = 'sp-chip' + (activeIssuerId === iss.id ? ' active' : '');
+        chip.textContent = `${iss.name} (${ic[iss.id]})`;
+        chip.addEventListener('click', () => { activeIssuerId = activeIssuerId === iss.id ? null : iss.id; renderFilterChips(); renderList(); });
+        spIssuerChips.appendChild(chip);
+      });
+
+      spClientChips.innerHTML = '';
+      (store.clients||[]).forEach(cli => {
+        if (!cc[cli.id]) return;
+        const chip = document.createElement('button');
+        chip.className = 'sp-chip' + (activeClientId === cli.id ? ' active' : '');
+        chip.textContent = `${cli.name} (${cc[cli.id]})`;
+        chip.addEventListener('click', () => { activeClientId = activeClientId === cli.id ? null : cli.id; renderFilterChips(); renderList(); });
+        spClientChips.appendChild(chip);
+      });
+
+      if (spFilterClear) spFilterClear.style.display = (activeIssuerId||activeClientId) ? 'block' : 'none';
+    }
+
+    function renderList() {
+      if (typeof store === 'undefined') return;
+      const all = (store.quotes||[]).slice().reverse();
+      const total = all.length;
+      const q = norm(spQuery);
+
+      let filtered = all.filter(qt => {
+        if (activeIssuerId && qt.issuerId !== activeIssuerId) return false;
+        if (activeClientId && qt.clientId !== activeClientId) return false;
+        if (q) {
+          const iss = (store.issuers||[]).find(i=>i.id===qt.issuerId)||{};
+          const cli = (store.clients||[]).find(c=>c.id===qt.clientId)||{};
+          const totalStr = Number(qt.total||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+          return [qt.numero||'', iss.name||'', cli.name||'', fmtDate(qt.createdAt), totalStr, String(qt.total||'')]
+            .some(f => norm(f).includes(q));
+        }
+        return true;
+      });
+
+      const af = activeIssuerId || activeClientId || q;
+      spInfo.textContent = af && filtered.length !== total
+        ? (filtered.length === 0 ? 'Nenhum resultado' : `${filtered.length} de ${total} orçamentos`)
+        : (total > 0 ? `${total} orçamento${total!==1?'s':''}` : '');
+
+      if (filtered.length === 0) {
+        spList.innerHTML = `<div class="sp-empty"><div class="sp-empty-icon">${af?'🔍':'📭'}</div><h4>${af?'Nenhum resultado':'Nenhum orçamento ainda'}</h4><p>${af?'Tente outros filtros':'Crie seu primeiro orçamento na tela Início'}</p></div>`;
+        return;
+      }
+
+      spList.innerHTML = '';
+      filtered.forEach(qt => {
+        const iss = (store.issuers||[]).find(i=>i.id===qt.issuerId)||{};
+        const cli = (store.clients||[]).find(c=>c.id===qt.clientId)||{};
+        const card = document.createElement('div');
+        card.className = 'sp-card';
+        card.innerHTML = `
+          <div class="sp-card-top">
+            <span class="sp-card-num">📄 ${qt.numero||qt.id}</span>
+            <span class="sp-card-total">${fmtMoney(qt.total)}</span>
+          </div>
+          <div class="sp-card-parties">
+            <div class="sp-card-party"><span class="sp-card-party-label">De</span><span class="sp-card-party-name">${iss.name||'—'}</span></div>
+            <div class="sp-card-party"><span class="sp-card-party-label">Para</span><span class="sp-card-party-name">${cli.name||'—'}</span></div>
+          </div>
+          <div class="sp-card-footer">
+            <span class="sp-card-date">📅 ${fmtDate(qt.createdAt)}</span>
+            <div class="sp-card-btns">
+              <button class="sp-card-btn view" data-id="${qt.id}">👁 Ver</button>
+              <button class="sp-card-btn" data-action="word" data-id="${qt.id}" title="Word">📄</button>
+              <button class="sp-card-btn" data-action="pdf"  data-id="${qt.id}" title="PDF">📑</button>
+              <button class="sp-card-btn" data-action="edit" data-id="${qt.id}" title="Editar">✏️</button>
+              <button class="sp-card-btn del" data-action="del" data-id="${qt.id}" title="Excluir">🗑</button>
+            </div>
+          </div>`;
+        card.addEventListener('click', e => { if (e.target.closest('.sp-card-btn')) return; if (typeof openPreview==='function') openPreview(qt.id); showScreen('home'); });
+        card.querySelector('.sp-card-btn.view').addEventListener('click', () => { if (typeof openPreview==='function') openPreview(qt.id); showScreen('home'); });
+        card.querySelector('[data-action="word"]').addEventListener('click', () => { if (typeof exportQuoteDoc==='function') exportQuoteDoc(qt.id); });
+        card.querySelector('[data-action="pdf"]').addEventListener('click',  () => { if (typeof exportQuotePdf==='function') exportQuotePdf(qt.id); });
+        card.querySelector('[data-action="edit"]').addEventListener('click', () => { if (typeof startEditMode==='function') startEditMode(qt.id); showScreen('home'); });
+        card.querySelector('[data-action="del"]').addEventListener('click', () => {
+          if (!confirm('❓ Excluir este orçamento?')) return;
+          store.quotes = store.quotes.filter(x => x.id !== qt.id);
+          if (typeof saveStore==='function') saveStore(store);
+          renderPanel();
+          if (typeof renderQuotes==='function') renderQuotes();
+        });
+        spList.appendChild(card);
+      });
+    }
+
+    function renderPanel() {
+      if (typeof store === 'undefined') return;
+      renderFilterChips();
+      renderList();
+      renderCadastroStats();
+    }
+
+    // Ao salvar orçamento → vai para a tela de orçamentos
+    document.addEventListener('click', e => {
+      if (e.target && e.target.id === 'saveQuoteBtn') {
+        setTimeout(() => { renderPanel(); showScreen('orcamentos'); }, 400);
+      }
+    });
+
+    // ===================================================
+    // PATCH: Editar emissor/cliente → navega para Cadastro
+    // app.js faz window.scrollTo({top:0}) mas agora os forms
+    // estão na tela Cadastro, então precisamos trocar de tela.
+    // ===================================================
+    document.addEventListener('click', e => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      if (btn.classList.contains('edit-issuer') || btn.classList.contains('edit-client')) {
+        // Deixa app.js preencher os campos primeiro, depois muda de tela
+        setTimeout(() => {
+          showScreen('cadastro');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 50);
+      }
+    }, true); // capture=true para rodar antes do app.js
+
+    const _init = setInterval(() => {
+      if (typeof store !== 'undefined' && typeof renderQuotes !== 'undefined') {
+        clearInterval(_init);
+        renderPanel();
+      }
+    }, 200);
+
+    // ===================================================
+    // MODAL DE PERFIL
+    // ===================================================
+    const profileBtn    = document.getElementById('profileBtn');
+    const profileModal  = document.getElementById('profileModal');
+    const profileDropdown = document.getElementById('profileDropdown');
+    const closeProfileModal = document.getElementById('closeProfileModal');
+    const pdProfileBtn  = document.getElementById('pdProfileBtn');
+
+    function getInitials(name) {
+      if (!name) return '?';
+      const parts = name.trim().split(/\s+/);
+      if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+      return (parts[0].charAt(0) + parts[parts.length-1].charAt(0)).toUpperCase();
+    }
+
+    function showMsg(elId, msg, success) {
+      const el = document.getElementById(elId);
+      if (!el) return;
+      el.textContent = msg;
+      el.style.display = 'block';
+      el.style.background = success ? '#d1fae5' : '#fee2e2';
+      el.style.color      = success ? '#065f46' : '#991b1b';
+      el.style.border     = '1px solid ' + (success ? '#6ee7b7' : '#fca5a5');
+      setTimeout(() => { el.style.display = 'none'; }, 4000);
+    }
+
+    // Abre/fecha dropdown ao clicar no botão de perfil
+    profileBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = profileDropdown.style.display === 'block';
+      profileDropdown.style.display = isOpen ? 'none' : 'block';
+
+      if (!isOpen) {
+        // Posiciona o dropdown alinhado abaixo do botão (igual Visitech)
+        const rect = profileBtn.getBoundingClientRect();
+        const isMobile = window.innerWidth <= 600;
+        const dropW = Math.max(rect.width, 220);
+        profileDropdown.style.top    = (rect.bottom + 6) + 'px';
+        profileDropdown.style.left   = 'auto';
+        profileDropdown.style.width  = dropW + 'px';
+        if (isMobile) {
+          profileDropdown.style.right = '12px';
+        } else {
+          // Alinha borda direita do dropdown com borda direita do botão
+          profileDropdown.style.right = (window.innerWidth - rect.right) + 'px';
+        }
+        // Preenche dados no dropdown
+        const auth = window.authManager;
+        if (auth && auth.currentUser) {
+          const email = auth.currentUser.email || '';
+          auth.getSupabase()
+            .from('profiles').select('username, full_name').eq('id', auth.currentUser.id).single()
+            .then(({ data: profile }) => {
+              const name = profile?.username || profile?.full_name || email.split('@')[0];
+              document.getElementById('pdAvatar').textContent = getInitials(name);
+              document.getElementById('pdName').textContent   = name;
+              document.getElementById('pdEmail').textContent  = email;
+            }).catch(() => {
+              const name = email.split('@')[0];
+              document.getElementById('pdAvatar').textContent = getInitials(name);
+              document.getElementById('pdName').textContent   = name;
+              document.getElementById('pdEmail').textContent  = email;
+            });
+        }
+      }
+    });
+
+    // Fecha dropdown ao clicar fora
+    document.addEventListener('click', () => {
+      profileDropdown.style.display = 'none';
+    });
+    profileDropdown.addEventListener('click', e => e.stopPropagation());
+
+    // Botão "Sair da conta" no dropdown
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      profileDropdown.style.display = 'none';
+      if (!window.authManager) return;
+      await window.authManager.signOut();
+    });
+
+    // Botão "Meu Perfil" no dropdown → abre modal
+    pdProfileBtn.addEventListener('click', () => {
+      profileDropdown.style.display = 'none';
+      openProfileModal();
+    });
+
+    function openProfileModal() {
+      profileModal.classList.remove('hidden');
+
+      const auth = window.authManager;
+      if (!auth || !auth.currentUser) return;
+
+      const user  = auth.currentUser;
+      const email = user.email || '';
+
+      auth.getSupabase()
+        .from('profiles').select('username, full_name').eq('id', user.id).single()
+        .then(({ data: profile }) => {
+          const displayName = profile?.username || profile?.full_name || email.split('@')[0];
+          const initials = getInitials(displayName);
+          document.getElementById('profileModalAvatar').textContent = initials;
+          document.getElementById('profileModalName').textContent   = displayName;
+          document.getElementById('profileModalEmail').textContent  = email;
+          document.getElementById('newUsernameInput').value         = displayName;
+          document.getElementById('profileAvatar').textContent      = initials;
+        })
+        .catch(() => {
+          const fallback = email.split('@')[0];
+          document.getElementById('profileModalAvatar').textContent = getInitials(fallback);
+          document.getElementById('profileModalName').textContent   = fallback;
+          document.getElementById('profileModalEmail').textContent  = email;
+          document.getElementById('newUsernameInput').value         = fallback;
+        });
+    }
+
+    closeProfileModal.addEventListener('click', () => profileModal.classList.add('hidden'));
+    profileModal.addEventListener('click', e => { if (e.target === profileModal) profileModal.classList.add('hidden'); });
+
+    // Salvar novo username
+    document.getElementById('saveUsernameBtn').addEventListener('click', async () => {
+      const newName = document.getElementById('newUsernameInput').value.trim();
+      if (!newName || newName.length < 2) {
+        showMsg('usernameMsg', '❌ Nome deve ter pelo menos 2 caracteres.', false); return;
+      }
+      const auth = window.authManager;
+      if (!auth || !auth.currentUser) return;
+
+      const btn = document.getElementById('saveUsernameBtn');
+      btn.disabled = true; btn.textContent = 'Salvando...';
+
+      try {
+        const { error } = await auth.getSupabase()
+          .from('profiles')
+          .upsert({ id: auth.currentUser.id, email: auth.currentUser.email, username: newName, updated_at: new Date().toISOString() });
+
+        if (error) throw error;
+
+        // Atualiza header
+        document.getElementById('userName').textContent = newName;
+        document.getElementById('profileAvatar').textContent = getInitials(newName);
+        document.getElementById('profileModalAvatar').textContent = getInitials(newName);
+        document.getElementById('profileModalName').textContent   = newName;
+
+        showMsg('usernameMsg', '✅ Nome de usuário atualizado!', true);
+      } catch(err) {
+        showMsg('usernameMsg', '❌ ' + (err.message || 'Erro ao salvar.'), false);
+      } finally {
+        btn.disabled = false; btn.textContent = 'Salvar';
+      }
+    });
+
+    // Salvar nova senha
+    document.getElementById('savePasswordBtn').addEventListener('click', async () => {
+      const newPwd  = document.getElementById('newPasswordInput').value;
+      const confPwd = document.getElementById('confirmPasswordInput').value;
+
+      if (!newPwd || newPwd.length < 6) {
+        showMsg('passwordMsg', '❌ A senha deve ter pelo menos 6 caracteres.', false); return;
+      }
+      if (newPwd !== confPwd) {
+        showMsg('passwordMsg', '❌ As senhas não coincidem.', false); return;
+      }
+
+      const auth = window.authManager;
+      if (!auth || !auth.getSupabase) return;
+
+      const btn = document.getElementById('savePasswordBtn');
+      btn.disabled = true; btn.textContent = '🔄 Alterando...';
+
+      try {
+        const { error } = await auth.getSupabase().auth.updateUser({ password: newPwd });
+        if (error) throw error;
+
+        document.getElementById('newPasswordInput').value    = '';
+        document.getElementById('confirmPasswordInput').value = '';
+        showMsg('passwordMsg', '✅ Senha alterada com sucesso!', true);
+      } catch(err) {
+        let msg = err.message || 'Erro ao alterar senha.';
+        if (msg.includes('same password')) msg = 'A nova senha deve ser diferente da atual.';
+        showMsg('passwordMsg', '❌ ' + msg, false);
+      } finally {
+        btn.disabled = false; btn.textContent = '🔒 Alterar Senha';
+      }
+    });
+
+    // Toggle show/hide password
+    function togglePwd(inputId, btn) {
+      const input = document.getElementById(inputId);
+      const isHidden = input.type === 'password';
+      input.type = isHidden ? 'text' : 'password';
+      const svg = btn.querySelector('svg');
+      svg.innerHTML = isHidden
+        ? `<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>`
+        : `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>`;
+    }
+
+    // Popula o avatar no header e sidebar assim que o auth.js carrega o nome
+    const _avatarInit = setInterval(() => {
+      const nameEl = document.getElementById('userName');
+      const avatarEl = document.getElementById('profileAvatar');
+      const sidebarAvatarEl = document.getElementById('sidebarAvatar');
+      const sidebarNameEl = document.getElementById('sidebarName');
+      if (nameEl && nameEl.textContent && nameEl.textContent.trim().length > 0) {
+        const name = nameEl.textContent.trim();
+        const initials = getInitials(name);
+        avatarEl.textContent = initials;
+        if (sidebarAvatarEl) sidebarAvatarEl.textContent = initials;
+        if (sidebarNameEl) sidebarNameEl.textContent = name;
+        clearInterval(_avatarInit);
+      }
+    }, 300);
+  </script>
+  <script>
+    // Preenche perfil no menu mobile
+    function updateMobileProfile() {
+      const auth = window.authManager;
+      if (!auth || !auth.currentUser) return;
+      const name = document.getElementById('sidebarProfileName');
+      const avatar = document.getElementById('sidebarProfileAvatar');
+      const user = auth.currentUser;
+      const displayName = user.user_metadata?.username || user.user_metadata?.full_name || user.email?.split('@')[0] || '?';
+      if (name) name.textContent = displayName;
+      if (avatar) avatar.textContent = displayName.charAt(0).toUpperCase();
+    }
+    setTimeout(updateMobileProfile, 1500);
+
+    // Menu mobile hamburguer
+    (function() {
+      const hamburgerBtn = document.getElementById('hamburgerBtn');
+      const sidebar = document.querySelector('.sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+
+      function openMenu() {
+        sidebar.classList.add('mobile-open');
+        overlay.classList.add('visible');
+        document.body.style.overflow = 'hidden';
+      }
+      function closeMenu() {
+        sidebar.classList.remove('mobile-open');
+        overlay.classList.remove('visible');
+        document.body.style.overflow = '';
+      }
+
+      if (hamburgerBtn) hamburgerBtn.addEventListener('click', openMenu);
+      if (overlay) overlay.addEventListener('click', closeMenu);
+
+      // Fecha ao clicar em qualquer item do menu
+      document.querySelectorAll('.sidebar-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (window.innerWidth <= 600) closeMenu();
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
