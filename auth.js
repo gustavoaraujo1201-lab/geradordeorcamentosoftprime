@@ -64,9 +64,9 @@ class AuthManager {
 
   showAuth() {
     const path = window.location.pathname;
-    const isLoginPage = path.endsWith('login.html') || path === '/login' || path === '/login/';
+    const isLoginPage = path.endsWith('login.html') || path === '/login' || path === '/login/' || path === '/';
     if (!isLoginPage) {
-      window.location.replace('/login.html');
+      window.location.replace('/login');
     }
     // Já está no login — não faz nada, para aqui
   }
@@ -77,7 +77,7 @@ class AuthManager {
     const isAppPage = path.endsWith('index.html') || path === '/index' || path === '/index/';
 
     if (isLoginPage) {
-      window.location.replace('/index.html');
+      window.location.replace('/index');
       return;
     }
 
@@ -242,7 +242,7 @@ class AuthManager {
   async signOut() {
     try {
       await this.supabase.auth.signOut();
-      window.location.href = '/login.html';
+      window.location.href = '/login';
       return { success: true };
     } catch (error) {
       return { success: false, message: `❌ ${error.message}` };
@@ -252,7 +252,7 @@ class AuthManager {
   async resetPassword(email) {
     try {
       const { error } = await this.supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/login.html`
+        redirectTo: `${window.location.origin}/login`
       });
       if (error) throw error;
       return { success: true, message: '✅ Email de recuperação enviado!' };

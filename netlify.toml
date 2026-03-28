@@ -1,33 +1,37 @@
 [build]
   publish = "."
 
-# Raiz vai direto para /login
+# Raiz vai direto para /login (sem .html)
 [[redirects]]
   from = "/"
   to = "/login"
   status = 301
+  force = true
 
-# Remove .html — redireciona permanentemente
+# Se alguém digitar login.html → manda para /login
 [[redirects]]
   from = "/login.html"
   to = "/login"
   status = 301
+  force = true
 
+# Se alguém digitar index.html → manda para /index
 [[redirects]]
   from = "/index.html"
   to = "/index"
   status = 301
+  force = true
 
-# Serve os arquivos nas URLs limpas
+# Serve o arquivo real sem mudar a URL (200 = URL fica limpa)
 [[redirects]]
   from = "/login"
   to = "/login.html"
-  status = 301
+  status = 200
 
 [[redirects]]
   from = "/index"
   to = "/index.html"
-  status = 301
+  status = 200
 
 [[headers]]
   for = "/*"
