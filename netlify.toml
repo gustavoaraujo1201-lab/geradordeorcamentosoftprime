@@ -1,11 +1,22 @@
 [build]
   publish = "."
 
-# Raiz vai direto para login.html
+# Raiz vai direto para /login
 [[redirects]]
   from = "/"
   to = "/login.html"
   status = 302
+
+# URLs limpas — sem .html
+[[redirects]]
+  from = "/login"
+  to = "/login.html"
+  status = 200
+
+[[redirects]]
+  from = "/index"
+  to = "/index.html"
+  status = 200
 
 [[headers]]
   for = "/*"
