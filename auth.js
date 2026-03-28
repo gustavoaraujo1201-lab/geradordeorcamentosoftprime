@@ -49,8 +49,13 @@ class AuthManager {
       this.supabase.auth.onAuthStateChange((event, session) => {
         console.log('🔔 Auth event:', event);
         if (event === 'SIGNED_IN') {
-          this.currentUser = session.user;
-          this.showApp();
+          // Evita loop: só age se não tinha usuário antes
+          if (!this.currentUser) {
+            this.currentUser = session.user;
+            this.showApp();
+          } else {
+            this.currentUser = session.user;
+          }
         } else if (event === 'SIGNED_OUT') {
           this.currentUser = null;
           this.showAuth();
@@ -64,11 +69,12 @@ class AuthManager {
 
   showAuth() {
     const path = window.location.pathname;
-    const isLoginPage = path.endsWith('login.html') || path === '/login' || path === '/login/' || path === '/';
-    if (!isLoginPage) {
+    const isLoginPage = path.endsWith('login.html') || path === '/login' || path === '/login/';
+    const isRoot = path === '/';
+    if (!isLoginPage && !isRoot) {
       window.location.replace('/login');
     }
-    // Já está no login — não faz nada, para aqui
+    // Já está no login — não redireciona
   }
 
   showApp() {
@@ -77,11 +83,12 @@ class AuthManager {
     const isAppPage = path.endsWith('index.html') || path === '/index' || path === '/index/';
 
     if (isLoginPage) {
+      // Só redireciona se realmente está na tela de login
       window.location.replace('/index');
       return;
     }
 
-    // Já está no app — só atualiza UI, NUNCA redireciona
+    // Já está no app — apenas atualiza UI
     if (!isAppPage) return;
 
     const userNameEl = document.getElementById('userName');
