@@ -30,7 +30,7 @@ class AuthManager {
       }
 
       this.supabase = window.supabase.createClient(url, key, {
-        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
       });
 
       const { data: { session }, error } = await this.supabase.auth.getSession();
@@ -39,38 +39,36 @@ class AuthManager {
       this._initialized = true;
       this._redirecting = false;
 
+      const path = window.location.pathname;
+      const isLoginPage = path.endsWith('login.html') || path === '/login' || path === '/login/' || path === '/';
+      const isAppPage = path.endsWith('index.html') || path === '/index' || path === '/index/';
+
       if (session) {
         this.currentUser = session.user;
-        const path = window.location.pathname;
-        const isLoginPage = path.endsWith('login.html') || path === '/login' || path === '/login/' || path === '/';
         if (isLoginPage) {
           // Estava no login com sessão ativa → vai para o app
           this._redirecting = true;
           window.location.replace('/index');
-        } else {
-          // Já está no app → só atualiza a UI
+        } else if (isAppPage) {
+          // Já está no app → só atualiza UI, sem redirecionar
           this.showApp();
         }
       } else {
-        this.showAuth();
+        if (isAppPage) {
+          // Sem sessão no app → volta para login
+          this._redirecting = true;
+          window.location.replace('/login');
+        }
+        // Se já está no login sem sessão → não faz nada
       }
 
-      // Só reage a SIGNED_IN e SIGNED_OUT — ignora todo o resto
+      // Reage apenas a SIGNED_OUT — SIGNED_IN é tratado acima no init
       this.supabase.auth.onAuthStateChange((event, session) => {
         console.log('🔔 Auth event:', event);
-        if (event === 'SIGNED_IN') {
-          this.currentUser = session.user;
-          // Só redireciona se está na página de login
-          const path = window.location.pathname;
-          const isLoginPage = path.endsWith('login.html') || path === '/login' || path === '/login/' || path === '/';
-          if (isLoginPage && !this._redirecting) {
-            this._redirecting = true;
-            window.location.replace('/index');
-          }
-        } else if (event === 'SIGNED_OUT') {
+        if (event === 'SIGNED_OUT') {
           this.currentUser = null;
-          this._redirecting = false;
-          this.showAuth();
+          this._redirecting = true;
+          window.location.replace('/login');
         }
       });
 
