@@ -4,10 +4,21 @@
 # Raiz vai direto para /login
 [[redirects]]
   from = "/"
-  to = "/login.html"
-  status = 302
+  to = "/login"
+  status = 301
 
-# URLs limpas — sem .html
+# Remove .html — redireciona permanentemente
+[[redirects]]
+  from = "/login.html"
+  to = "/login"
+  status = 301
+
+[[redirects]]
+  from = "/index.html"
+  to = "/index"
+  status = 301
+
+# Serve os arquivos nas URLs limpas
 [[redirects]]
   from = "/login"
   to = "/login.html"
