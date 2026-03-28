@@ -3,9 +3,6 @@
   "version": "1.0.0",
   "description": "Gerador de orçamentos (frontend estático)",
   "main": "app.js",
-  "scripts": {
-    "build": "node scripts/generate-config.js && node scripts/copy-to-public.js"
-  },
   "author": "",
   "license": "MIT"
 }
