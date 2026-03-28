@@ -1,4 +1,4 @@
-// auth.js — Sistema de Autenticação com Supabase (sem loop)
+// auth.js — Autenticação Supabase — versão definitiva sem loop
 
 class AuthManager {
   constructor() {
@@ -11,7 +11,7 @@ class AuthManager {
 
   async init() {
     try {
-      // Aguarda Supabase SDK carregar
+      // Aguarda SDK do Supabase carregar
       let attempts = 0;
       while (typeof window.supabase === 'undefined' && attempts < 20) {
         await new Promise(r => setTimeout(r, 100));
@@ -19,7 +19,8 @@ class AuthManager {
       }
 
       if (typeof window.supabase === 'undefined') {
-        console.error('❌ Supabase não está carregado após espera');
+        console.error('❌ Supabase SDK não carregado');
+        this._removeGuard();
         return;
       }
 
@@ -27,7 +28,8 @@ class AuthManager {
       const key = window.SUPABASE_ANON_KEY;
 
       if (!url || !key) {
-        console.error('❌ Credenciais não configuradas.');
+        console.error('❌ Credenciais Supabase não configuradas');
+        this._removeGuard();
         return;
       }
 
@@ -35,13 +37,13 @@ class AuthManager {
         auth: {
           persistSession: true,
           autoRefreshToken: true,
-          detectSessionInUrl: false   // IMPORTANTE: evita loop com hash de URL
+          detectSessionInUrl: false  // CRÍTICO: evita que o SDK dispare SIGNED_IN no load
         }
       });
 
-      // Verifica sessão UMA única vez no init
+      // Verifica sessão UMA ÚNICA VEZ — sem depender do listener
       const { data: { session }, error } = await this.supabase.auth.getSession();
-      if (error) console.error('❌ Erro ao verificar sessão:', error.message);
+      if (error) console.error('❌ Erro ao obter sessão:', error.message);
 
       this._initialized = true;
 
@@ -52,31 +54,29 @@ class AuthManager {
         this.currentUser = session.user;
         console.log('✅ Sessão ativa:', this.currentUser.email);
 
-        if (isLoginPage && !this._redirecting) {
-          // Usuário já logado tentando acessar login → vai para o app
+        if (isLoginPage) {
           this._redirecting = true;
           window.location.replace('/index');
           return;
         }
 
         if (isAppPage) {
-          // Já está no app → atualiza UI
           this._updateAppUI();
         }
+
       } else {
         console.log('ℹ️ Sem sessão ativa');
 
-        if (isAppPage && !this._redirecting) {
-          // Sem sessão no app → volta para login
+        if (isAppPage) {
           this._redirecting = true;
           window.location.replace('/login');
           return;
         }
-        // Se já está no login sem sessão → não faz nada
+
+        this._removeGuard();
       }
 
-      // Listener APENAS para SIGNED_OUT
-      // NÃO reagimos a SIGNED_IN aqui para evitar loops
+      // Listener MÍNIMO: só SIGNED_OUT e TOKEN_REFRESHED
       this.supabase.auth.onAuthStateChange((event, session) => {
         console.log('🔔 Auth event:', event);
 
@@ -88,18 +88,16 @@ class AuthManager {
           }
         }
 
-        // TOKEN_REFRESHED: apenas atualiza o usuário local, sem redirecionar
         if (event === 'TOKEN_REFRESHED' && session) {
           this.currentUser = session.user;
         }
       });
 
-    } catch (error) {
-      console.error('❌ Erro ao inicializar auth:', error);
+    } catch (err) {
+      console.error('❌ Erro no init do AuthManager:', err);
+      this._removeGuard();
     }
   }
-
-  // ── Helpers de rota ────────────────────────────────────────────────────────
 
   _isLoginPage() {
     const p = window.location.pathname;
@@ -111,9 +109,14 @@ class AuthManager {
     return p.endsWith('index.html') || p === '/index' || p === '/index/';
   }
 
-  // ── Atualiza UI do app (nome do usuário, remove guard) ────────────────────
+  _removeGuard() {
+    const guard = document.getElementById('auth-guard');
+    if (guard) guard.remove();
+  }
 
   _updateAppUI() {
+    this._removeGuard();
+
     const userNameEl = document.getElementById('userName');
     if (userNameEl && this.currentUser) {
       this.supabase
@@ -122,12 +125,13 @@ class AuthManager {
         .eq('id', this.currentUser.id)
         .single()
         .then(({ data: profile }) => {
-          userNameEl.textContent =
+          const name =
             profile?.username ||
             profile?.full_name ||
             this.currentUser.user_metadata?.username ||
             this.currentUser.user_metadata?.full_name ||
             this.currentUser.email.split('@')[0];
+          userNameEl.textContent = name;
         })
         .catch(() => {
           userNameEl.textContent =
@@ -137,15 +141,16 @@ class AuthManager {
         });
     }
 
-    const guard = document.getElementById('auth-guard');
-    if (guard) guard.remove();
     if (typeof renderAll === 'function') renderAll();
   }
 
-  // Mantido para compatibilidade com código legado
-  showApp() { this._updateAppUI(); }
-
-  // ── Sign Up ────────────────────────────────────────────────────────────────
+  showApp()  { this._updateAppUI(); }
+  showAuth() {
+    if (!this._redirecting && !this._isLoginPage()) {
+      this._redirecting = true;
+      window.location.replace('/login');
+    }
+  }
 
   async signUp(email, password, username) {
     try {
@@ -157,27 +162,21 @@ class AuthManager {
 
       const cleanUsername = username.trim();
 
-      // Verifica se username já existe
-      const { data: existingUser } = await this.supabase
+      const { data: existing } = await this.supabase
         .from('profiles').select('id').ilike('username', cleanUsername).maybeSingle();
-
-      if (existingUser)
+      if (existing)
         return { success: false, message: '❌ Este nome de usuário já está em uso. Escolha outro.' };
 
-      // Cadastra salvando username no metadata
       const { data, error } = await this.supabase.auth.signUp({
         email, password,
-        options: {
-          data: { username: cleanUsername, full_name: cleanUsername, display_name: cleanUsername }
-        }
+        options: { data: { username: cleanUsername, full_name: cleanUsername, display_name: cleanUsername } }
       });
 
       if (error) throw error;
       if (!data.user) throw new Error('Usuário não foi criado. Tente novamente.');
 
-      console.log('✅ Usuário criado no Auth:', data.user.id);
+      console.log('✅ Auth user criado:', data.user.id);
 
-      // Tenta login automático (funciona se "Confirm email" estiver DESATIVADO)
       const { data: signInData, error: signInError } = await this.supabase.auth.signInWithPassword({ email, password });
 
       if (!signInError && signInData?.session) {
@@ -185,21 +184,15 @@ class AuthManager {
         const uid = signInData.session.user.id;
 
         try {
-          await this.supabase
-            .from('profiles')
-            .upsert({
-              id: uid,
-              email,
-              username: cleanUsername,
-              full_name: cleanUsername,
-              updated_at: new Date().toISOString()
-            }, { onConflict: 'id' });
-          console.log('✅ Profile salvo com sucesso');
+          await this.supabase.from('profiles').upsert({
+            id: uid, email, username: cleanUsername, full_name: cleanUsername,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'id' });
+          console.log('✅ Profile salvo');
         } catch (e) {
-          console.warn('⚠️ Exceção ao salvar profile:', e.message);
+          console.warn('⚠️ Erro ao salvar profile:', e.message);
         }
 
-        // Redireciona para o app APÓS salvar tudo
         this._redirecting = true;
         window.location.replace('/index');
         return { success: true, autoLogin: true, message: '✅ Conta criada e login realizado!' };
@@ -207,17 +200,15 @@ class AuthManager {
 
       return { success: true, autoLogin: false, message: '✅ Conta criada! Faça login agora.' };
 
-    } catch (error) {
-      console.error('❌ Erro no cadastro:', error);
-      let msg = error.message || 'Erro desconhecido';
-      if (msg.includes('Failed to fetch'))         msg = 'Erro de conexão. Verifique sua internet.';
-      if (msg.includes('User already registered')) msg = 'Este email já está cadastrado.';
+    } catch (err) {
+      console.error('❌ Erro no cadastro:', err);
+      let msg = err.message || 'Erro desconhecido';
+      if (msg.includes('Failed to fetch'))          msg = 'Erro de conexão. Verifique sua internet.';
+      if (msg.includes('User already registered'))  msg = 'Este email já está cadastrado.';
       if (msg.includes('Password should be at least')) msg = 'A senha deve ter pelo menos 6 caracteres.';
       return { success: false, message: `❌ ${msg}` };
     }
   }
-
-  // ── Sign In ────────────────────────────────────────────────────────────────
 
   async signIn(identifier, password) {
     try {
@@ -226,7 +217,6 @@ class AuthManager {
 
       let email = identifier.trim();
 
-      // Login por username
       if (!email.includes('@')) {
         console.log('🔄 Buscando email por username:', email);
         const { data: profile, error: profileError } = await this.supabase
@@ -245,14 +235,13 @@ class AuthManager {
       console.log('✅ Login realizado');
       this.currentUser = data.user;
 
-      // Redireciona para o app
       this._redirecting = true;
       window.location.replace('/index');
       return { success: true, message: '✅ Login realizado com sucesso!' };
 
-    } catch (error) {
-      console.error('❌ Erro no login:', error);
-      let msg = error.message || 'Erro desconhecido';
+    } catch (err) {
+      console.error('❌ Erro no login:', err);
+      let msg = err.message || 'Erro desconhecido';
       if (msg.includes('Invalid login credentials')) msg = 'Email/usuário ou senha incorretos.';
       if (msg.includes('Email not confirmed'))       msg = 'Confirme seu email antes de fazer login.';
       if (msg.includes('Failed to fetch'))           msg = 'Erro de conexão. Verifique sua internet.';
@@ -260,20 +249,15 @@ class AuthManager {
     }
   }
 
-  // ── Sign Out ───────────────────────────────────────────────────────────────
-
   async signOut() {
     try {
       if (!this.supabase) return { success: false, message: '❌ Sistema não inicializado.' };
       await this.supabase.auth.signOut();
-      // O listener SIGNED_OUT já cuida do redirecionamento
       return { success: true };
-    } catch (error) {
-      return { success: false, message: `❌ ${error.message}` };
+    } catch (err) {
+      return { success: false, message: `❌ ${err.message}` };
     }
   }
-
-  // ── Reset Password ─────────────────────────────────────────────────────────
 
   async resetPassword(email) {
     try {
@@ -282,17 +266,15 @@ class AuthManager {
       });
       if (error) throw error;
       return { success: true, message: '✅ Email de recuperação enviado!' };
-    } catch (error) {
-      return { success: false, message: `❌ ${error.message}` };
+    } catch (err) {
+      return { success: false, message: `❌ ${err.message}` };
     }
   }
 
-  // ── Getters ────────────────────────────────────────────────────────────────
-
-  getUserId()      { return this.currentUser?.id    || null; }
-  getUserEmail()   { return this.currentUser?.email || null; }
-  getSupabase()    { return this.supabase; }
-  isAuthenticated(){ return this.currentUser !== null; }
+  getUserId()       { return this.currentUser?.id    || null; }
+  getUserEmail()    { return this.currentUser?.email || null; }
+  getSupabase()     { return this.supabase; }
+  isAuthenticated() { return this.currentUser !== null; }
 }
 
 window.authManager = new AuthManager();
