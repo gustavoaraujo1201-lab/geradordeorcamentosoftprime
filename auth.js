@@ -1,4 +1,4 @@
-// auth.js — Autenticação Supabase — versão definitiva sem loop
+// auth.js — Autenticação Supabase (versão estável com .html)
 
 class AuthManager {
   constructor() {
@@ -37,11 +37,11 @@ class AuthManager {
         auth: {
           persistSession: true,
           autoRefreshToken: true,
-          detectSessionInUrl: false  // CRÍTICO: evita que o SDK dispare SIGNED_IN no load
+          detectSessionInUrl: false
         }
       });
 
-      // Verifica sessão UMA ÚNICA VEZ — sem depender do listener
+      // Verifica sessão UMA ÚNICA VEZ
       const { data: { session }, error } = await this.supabase.auth.getSession();
       if (error) console.error('❌ Erro ao obter sessão:', error.message);
 
@@ -55,12 +55,14 @@ class AuthManager {
         console.log('✅ Sessão ativa:', this.currentUser.email);
 
         if (isLoginPage) {
+          // Estava no login com sessão → vai para o app
           this._redirecting = true;
-          window.location.replace('/index');
+          window.location.replace('/index.html');
           return;
         }
 
         if (isAppPage) {
+          // Já no app → remove guard e atualiza UI
           this._updateAppUI();
         }
 
@@ -68,15 +70,18 @@ class AuthManager {
         console.log('ℹ️ Sem sessão ativa');
 
         if (isAppPage) {
+          // No app sem sessão → vai para login
           this._redirecting = true;
-          window.location.replace('/login');
+          window.location.replace('/login.html');
           return;
         }
 
+        // Já está no login sem sessão → só remove guard
         this._removeGuard();
       }
 
-      // Listener MÍNIMO: só SIGNED_OUT e TOKEN_REFRESHED
+      // Listener MÍNIMO — só SIGNED_OUT e TOKEN_REFRESHED
+      // NÃO reagir a SIGNED_IN evita o loop de redirect
       this.supabase.auth.onAuthStateChange((event, session) => {
         console.log('🔔 Auth event:', event);
 
@@ -84,7 +89,7 @@ class AuthManager {
           this.currentUser = null;
           if (!this._redirecting) {
             this._redirecting = true;
-            window.location.replace('/login');
+            window.location.replace('/login.html');
           }
         }
 
@@ -99,6 +104,8 @@ class AuthManager {
     }
   }
 
+  // ── Helpers de rota ───────────────────────────────────────────
+
   _isLoginPage() {
     const p = window.location.pathname;
     return p.endsWith('login.html') || p === '/login' || p === '/login/' || p === '/';
@@ -109,12 +116,17 @@ class AuthManager {
     return p.endsWith('index.html') || p === '/index' || p === '/index/';
   }
 
+  // ── Remove a tela de bloqueio ──────────────────────────────────
+
   _removeGuard() {
     const guard = document.getElementById('auth-guard');
     if (guard) guard.remove();
   }
 
+  // ── Atualiza UI do app ─────────────────────────────────────────
+
   _updateAppUI() {
+    // Remove guard imediatamente — libera a tela
     this._removeGuard();
 
     const userNameEl = document.getElementById('userName');
@@ -125,13 +137,12 @@ class AuthManager {
         .eq('id', this.currentUser.id)
         .single()
         .then(({ data: profile }) => {
-          const name =
+          userNameEl.textContent =
             profile?.username ||
             profile?.full_name ||
             this.currentUser.user_metadata?.username ||
             this.currentUser.user_metadata?.full_name ||
             this.currentUser.email.split('@')[0];
-          userNameEl.textContent = name;
         })
         .catch(() => {
           userNameEl.textContent =
@@ -141,16 +152,20 @@ class AuthManager {
         });
     }
 
+    // Compatibilidade com app.js
     if (typeof renderAll === 'function') renderAll();
   }
 
+  // Aliases para compatibilidade com código legado
   showApp()  { this._updateAppUI(); }
   showAuth() {
     if (!this._redirecting && !this._isLoginPage()) {
       this._redirecting = true;
-      window.location.replace('/login');
+      window.location.replace('/login.html');
     }
   }
+
+  // ── Sign Up ────────────────────────────────────────────────────
 
   async signUp(email, password, username) {
     try {
@@ -177,6 +192,7 @@ class AuthManager {
 
       console.log('✅ Auth user criado:', data.user.id);
 
+      // Login automático (requer "Confirm email" DESATIVADO no Supabase)
       const { data: signInData, error: signInError } = await this.supabase.auth.signInWithPassword({ email, password });
 
       if (!signInError && signInData?.session) {
@@ -194,7 +210,7 @@ class AuthManager {
         }
 
         this._redirecting = true;
-        window.location.replace('/index');
+        window.location.replace('/index.html');
         return { success: true, autoLogin: true, message: '✅ Conta criada e login realizado!' };
       }
 
@@ -203,12 +219,14 @@ class AuthManager {
     } catch (err) {
       console.error('❌ Erro no cadastro:', err);
       let msg = err.message || 'Erro desconhecido';
-      if (msg.includes('Failed to fetch'))          msg = 'Erro de conexão. Verifique sua internet.';
-      if (msg.includes('User already registered'))  msg = 'Este email já está cadastrado.';
+      if (msg.includes('Failed to fetch'))             msg = 'Erro de conexão. Verifique sua internet.';
+      if (msg.includes('User already registered'))     msg = 'Este email já está cadastrado.';
       if (msg.includes('Password should be at least')) msg = 'A senha deve ter pelo menos 6 caracteres.';
       return { success: false, message: `❌ ${msg}` };
     }
   }
+
+  // ── Sign In ────────────────────────────────────────────────────
 
   async signIn(identifier, password) {
     try {
@@ -217,6 +235,7 @@ class AuthManager {
 
       let email = identifier.trim();
 
+      // Suporte a login por username
       if (!email.includes('@')) {
         console.log('🔄 Buscando email por username:', email);
         const { data: profile, error: profileError } = await this.supabase
@@ -236,7 +255,7 @@ class AuthManager {
       this.currentUser = data.user;
 
       this._redirecting = true;
-      window.location.replace('/index');
+      window.location.replace('/index.html');
       return { success: true, message: '✅ Login realizado com sucesso!' };
 
     } catch (err) {
@@ -249,15 +268,20 @@ class AuthManager {
     }
   }
 
+  // ── Sign Out ───────────────────────────────────────────────────
+
   async signOut() {
     try {
       if (!this.supabase) return { success: false, message: '❌ Sistema não inicializado.' };
       await this.supabase.auth.signOut();
+      // O listener SIGNED_OUT cuida do redirect
       return { success: true };
     } catch (err) {
       return { success: false, message: `❌ ${err.message}` };
     }
   }
+
+  // ── Reset Password ─────────────────────────────────────────────
 
   async resetPassword(email) {
     try {
@@ -270,6 +294,8 @@ class AuthManager {
       return { success: false, message: `❌ ${err.message}` };
     }
   }
+
+  // ── Getters ────────────────────────────────────────────────────
 
   getUserId()       { return this.currentUser?.id    || null; }
   getUserEmail()    { return this.currentUser?.email || null; }
