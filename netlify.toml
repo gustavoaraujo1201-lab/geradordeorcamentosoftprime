@@ -5,6 +5,7 @@
   from = "/"
   to = "/login.html"
   status = 302
+  force = true
 
 [[headers]]
   for = "/*"
