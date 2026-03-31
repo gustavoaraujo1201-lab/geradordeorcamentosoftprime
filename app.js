@@ -752,28 +752,30 @@ if (printBtn) {
   printBtn.addEventListener("click", ()=>{
     try {
       const content = previewArea ? previewArea.innerHTML : "";
-      const w = window.open("", "_blank");
-      w.document.write(`
-        <html><head>
-          <meta charset="utf-8">
-          <title>Orçamento - SoftPrime</title>
-          <style>
-            body{font-family:Arial,Helvetica,sans-serif;padding:30px 30px 70px 30px;color:#1a1a1a;max-width:800px;margin:0 auto;min-height:calc(100vh - 100px);display:flex;flex-direction:column}
-            table{width:100%;border-collapse:collapse;margin-top:16px;table-layout:auto}
-            th,td{border:1px solid #e5e7eb;padding:10px;text-align:left;vertical-align:middle}
-            th{background:#f9fafb;font-weight:600}
-            th:first-child,td:first-child{word-break:break-word;min-width:200px}
-            th:not(:first-child),td:not(:first-child){white-space:nowrap;width:1%;text-align:right}
-            th:nth-child(2),td:nth-child(2){text-align:center}
-            .signature{margin-top:160px;margin-bottom:40px;display:flex;flex-direction:column;align-items:center;gap:8px;page-break-inside:avoid}
-            .signature .sig-line{width:60%;border-top:2px solid #1a1a1a;height:0}
-            .signature .sig-name{font-weight:600;font-size:0.95rem;color:#1a1a1a;margin-top:8px}
-            .print-footer{position:fixed;bottom:0;left:0;right:0;text-align:center;font-size:0.85rem;color:#6b7280;padding:8px 16px;background:white;}
-          </style>
-        </head><body>${content}</body></html>
-      `);
-      w.document.close(); w.focus();
-      printWindowWhenReady(w);
+      const printStyle = `body{font-family:Arial,Helvetica,sans-serif;padding:30px 30px 70px 30px;color:#1a1a1a;max-width:800px;margin:0 auto}table{width:100%;border-collapse:collapse;margin-top:16px;table-layout:auto}th,td{border:1px solid #e5e7eb;padding:10px;text-align:left;vertical-align:middle}th{background:#f9fafb;font-weight:600}th:first-child,td:first-child{word-break:break-word;min-width:200px}th:not(:first-child),td:not(:first-child){white-space:nowrap;width:1%;text-align:right}th:nth-child(2),td:nth-child(2){text-align:center}.signature{margin-top:160px;margin-bottom:40px;display:flex;flex-direction:column;align-items:center;gap:8px;page-break-inside:avoid}.signature .sig-line{width:60%;border-top:2px solid #1a1a1a;height:0}.signature .sig-name{font-weight:600;font-size:0.95rem;color:#1a1a1a;margin-top:8px}.print-footer{position:fixed;bottom:0;left:0;right:0;text-align:center;font-size:0.85rem;color:#6b7280;padding:8px 16px;background:white;}`;
+      // Usa iframe oculto para impressão (evita bloqueio de popup no mobile)
+      let iframe = document.getElementById('_print_iframe');
+      if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.id = '_print_iframe';
+        iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:800px;height:600px;border:none;';
+        document.body.appendChild(iframe);
+      }
+      const doc = iframe.contentWindow.document;
+      doc.open();
+      doc.write(`<html><head><meta charset="utf-8"><title>Orçamento - SoftPrime</title><style>${printStyle}</style></head><body>${content}</body></html>`);
+      doc.close();
+      setTimeout(() => {
+        try {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+        } catch(e) {
+          const blob = new Blob([`<html><head><meta charset="utf-8"><style>${printStyle}</style></head><body>${content}</body></html>`], {type:'text/html'});
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.click();
+          setTimeout(() => URL.revokeObjectURL(url), 10000);
+        }
+      }, 500);
     } catch (err) {
       console.error("[ERROR] printBtn:", err);
       showNotification("Erro ao imprimir. Tente novamente.", "error");
@@ -979,10 +981,27 @@ function exportQuotePdf(quoteId){
     const issuer = store.issuers.find(i=>i.id===q.issuerId)||{};
     const client = store.clients.find(c=>c.id===q.clientId)||{};
     const html = renderQuoteHtml(q, issuer, client);
-    const w = window.open("", "_blank");
-    w.document.write(`<html><head><meta charset="utf-8"><title>Orçamento ${escapeHtml(q.numero || q.id)}</title><style>body{font-family:Arial,Helvetica,sans-serif;padding:30px 30px 70px 30px;color:#1a1a1a;max-width:800px;margin:0 auto}table{width:100%;border-collapse:collapse;margin-top:16px;table-layout:auto}th,td{border:1px solid #e5e7eb;padding:10px;text-align:left}th{background:#f9fafb;font-weight:600}td:first-child,th:first-child{word-break:break-word}td:not(:first-child),th:not(:first-child){white-space:nowrap;width:1%}.signature{margin-top:280px;display:flex;flex-direction:column;align-items:center;gap:8px;page-break-inside:avoid}.signature .sig-line{width:60%;border-top:2px solid #1a1a1a;height:0}.signature .sig-name{font-weight:600;font-size:0.95rem;color:#1a1a1a;margin-top:8px}.print-footer{position:fixed;bottom:0;left:0;right:0;text-align:center;font-size:0.85rem;color:#6b7280;padding:8px 16px;background:white;}</style></head><body>${html}</body></html>`);
-    w.document.close(); w.focus();
-    printWindowWhenReady(w);
+    const pdfStyle = `body{font-family:Arial,Helvetica,sans-serif;padding:30px 30px 70px 30px;color:#1a1a1a;max-width:800px;margin:0 auto}table{width:100%;border-collapse:collapse;margin-top:16px;table-layout:auto}th,td{border:1px solid #e5e7eb;padding:10px;text-align:left}th{background:#f9fafb;font-weight:600}td:first-child,th:first-child{word-break:break-word}td:not(:first-child),th:not(:first-child){white-space:nowrap;width:1%}.signature{margin-top:280px;display:flex;flex-direction:column;align-items:center;gap:8px;page-break-inside:avoid}.signature .sig-line{width:60%;border-top:2px solid #1a1a1a;height:0}.signature .sig-name{font-weight:600;font-size:0.95rem;color:#1a1a1a;margin-top:8px}.print-footer{position:fixed;bottom:0;left:0;right:0;text-align:center;font-size:0.85rem;color:#6b7280;padding:8px 16px;background:white;}`;
+    const fullHtml = `<html><head><meta charset="utf-8"><title>Orçamento ${escapeHtml(q.numero || q.id)}</title><style>${pdfStyle}</style></head><body>${html}</body></html>`;
+    // Usa iframe oculto (evita bloqueio de popup no mobile)
+    let iframe = document.getElementById('_print_iframe');
+    if (!iframe) {
+      iframe = document.createElement('iframe');
+      iframe.id = '_print_iframe';
+      iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:800px;height:600px;border:none;';
+      document.body.appendChild(iframe);
+    }
+    const doc = iframe.contentWindow.document;
+    doc.open(); doc.write(fullHtml); doc.close();
+    setTimeout(() => {
+      try { iframe.contentWindow.focus(); iframe.contentWindow.print(); }
+      catch(e) {
+        const blob = new Blob([fullHtml], {type:'text/html'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      }
+    }, 500);
   } catch (err) { console.error("[ERROR] exportQuotePdf:", err); showNotification("Erro ao exportar PDF", "error"); }
 }
 

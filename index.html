@@ -525,12 +525,29 @@
       .two-col-forms, .cadastro-grid { grid-template-columns: 1fr; gap: 12px; }
       .quotes-layout { grid-template-columns: 1fr; }
 
-      /* Tabela de itens — scroll horizontal no mobile */
-      .items-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-      .items-table { min-width: 480px; font-size: 13px; }
-      .items-table thead th { padding: 10px 8px; font-size: 11px; }
-      .items-table td { padding: 10px 8px; }
-      .items-table input { padding: 8px; font-size: 13px; }
+      /* Tabela de itens — layout empilhado no mobile */
+      .items-wrap { overflow-x: visible; }
+      .items-table { min-width: unset; font-size: 13px; width: 100%; }
+      .items-table thead { display: none; }
+      .items-table tbody tr {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        padding: 12px 0;
+        border-bottom: 1px solid #f3f4f6;
+        position: relative;
+      }
+      .items-table td { padding: 0; border: none; display: block; }
+      /* Descrição ocupa linha inteira */
+      .items-table td:nth-child(1) { grid-column: 1 / -1; }
+      .items-table td:nth-child(1)::before { content: 'Descrição'; display: block; font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; margin-bottom: 4px; }
+      .items-table td:nth-child(2)::before { content: 'Qtd'; display: block; font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; margin-bottom: 4px; }
+      .items-table td:nth-child(3)::before { content: 'Valor Unit.'; display: block; font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; margin-bottom: 4px; }
+      .items-table td:nth-child(4) { text-align: left !important; grid-column: 1; }
+      .items-table td:nth-child(4)::before { content: 'Total'; display: block; font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; margin-bottom: 4px; }
+      /* Botão excluir flutua no canto */
+      .items-table td:nth-child(5) { grid-column: 2; display: flex; align-items: flex-end; justify-content: flex-end; }
+      .items-table input { padding: 8px 10px; font-size: 14px; width: 100%; }
 
       /* Botão gerar orçamento */
       .btn-generate { font-size: 15px; padding: 14px 20px; }
