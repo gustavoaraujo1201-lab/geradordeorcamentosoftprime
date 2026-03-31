@@ -752,8 +752,7 @@ if (printBtn) {
   printBtn.addEventListener("click", ()=>{
     try {
       const content = previewArea ? previewArea.innerHTML : "";
-      const printStyle = `body{font-family:Arial,Helvetica,sans-serif;padding:30px 30px 70px 30px;color:#1a1a1a;max-width:800px;margin:0 auto}table{width:100%;border-collapse:collapse;margin-top:16px;table-layout:auto}th,td{border:1px solid #e5e7eb;padding:10px;text-align:left;vertical-align:middle}th{background:#f9fafb;font-weight:600}th:first-child,td:first-child{word-break:break-word;min-width:200px}th:not(:first-child),td:not(:first-child){white-space:nowrap;width:1%;text-align:right}th:nth-child(2),td:nth-child(2){text-align:center}.signature{margin-top:160px;margin-bottom:40px;display:flex;flex-direction:column;align-items:center;gap:8px;page-break-inside:avoid}.signature .sig-line{width:60%;border-top:2px solid #1a1a1a;height:0}.signature .sig-name{font-weight:600;font-size:0.95rem;color:#1a1a1a;margin-top:8px}.print-footer{position:fixed;bottom:0;left:0;right:0;text-align:center;font-size:0.85rem;color:#6b7280;padding:8px 16px;background:white;}`;
-      // Usa iframe oculto para impressão (evita bloqueio de popup no mobile)
+      const printStyle = `*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}body{font-family:Arial,Helvetica,sans-serif;padding:16px;color:#1a1a1a;max-width:760px;margin:0 auto;font-size:13px;}table{width:100%;border-collapse:collapse;}th,td{vertical-align:top;}img{max-width:100%;height:auto;}@media print{body{padding:8px;}@page{margin:1.2cm;size:A4 portrait;}}`;
       let iframe = document.getElementById('_print_iframe');
       if (!iframe) {
         iframe = document.createElement('iframe');
@@ -763,16 +762,13 @@ if (printBtn) {
       }
       const doc = iframe.contentWindow.document;
       doc.open();
-      doc.write(`<html><head><meta charset="utf-8"><title>Orçamento - SoftPrime</title><style>${printStyle}</style></head><body>${content}</body></html>`);
+      doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Orçamento - SoftPrime</title><style>${printStyle}</style></head><body>${content}</body></html>`);
       doc.close();
       setTimeout(() => {
-        try {
-          iframe.contentWindow.focus();
-          iframe.contentWindow.print();
-        } catch(e) {
-          const blob = new Blob([`<html><head><meta charset="utf-8"><style>${printStyle}</style></head><body>${content}</body></html>`], {type:'text/html'});
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.click();
+        try { iframe.contentWindow.focus(); iframe.contentWindow.print(); }
+        catch(e) {
+          const blob = new Blob([`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${printStyle}</style></head><body>${content}</body></html>`], {type:'text/html'});
+          const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.click();
           setTimeout(() => URL.revokeObjectURL(url), 10000);
         }
       }, 500);
@@ -976,14 +972,13 @@ function printWindowWhenReady(w) {
 
 function exportQuotePdf(quoteId){
   try {
-    const q = store.quotes.find(x=>x.id===quoteId); 
+    const q = store.quotes.find(x=>x.id===quoteId);
     if (!q) { showNotification("Orçamento não encontrado", "error"); return; }
     const issuer = store.issuers.find(i=>i.id===q.issuerId)||{};
     const client = store.clients.find(c=>c.id===q.clientId)||{};
     const html = renderQuoteHtml(q, issuer, client);
-    const pdfStyle = `body{font-family:Arial,Helvetica,sans-serif;padding:30px 30px 70px 30px;color:#1a1a1a;max-width:800px;margin:0 auto}table{width:100%;border-collapse:collapse;margin-top:16px;table-layout:auto}th,td{border:1px solid #e5e7eb;padding:10px;text-align:left}th{background:#f9fafb;font-weight:600}td:first-child,th:first-child{word-break:break-word}td:not(:first-child),th:not(:first-child){white-space:nowrap;width:1%}.signature{margin-top:280px;display:flex;flex-direction:column;align-items:center;gap:8px;page-break-inside:avoid}.signature .sig-line{width:60%;border-top:2px solid #1a1a1a;height:0}.signature .sig-name{font-weight:600;font-size:0.95rem;color:#1a1a1a;margin-top:8px}.print-footer{position:fixed;bottom:0;left:0;right:0;text-align:center;font-size:0.85rem;color:#6b7280;padding:8px 16px;background:white;}`;
-    const fullHtml = `<html><head><meta charset="utf-8"><title>Orçamento ${escapeHtml(q.numero || q.id)}</title><style>${pdfStyle}</style></head><body>${html}</body></html>`;
-    // Usa iframe oculto (evita bloqueio de popup no mobile)
+    const pdfStyle = `*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}body{font-family:Arial,Helvetica,sans-serif;padding:16px;color:#1a1a1a;max-width:760px;margin:0 auto;font-size:13px;}table{width:100%;border-collapse:collapse;}th,td{vertical-align:top;}img{max-width:100%;height:auto;}@media print{body{padding:8px;}@page{margin:1.2cm;size:A4 portrait;}}`;
+    const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Orçamento ${escapeHtml(q.numero||q.id)}</title><style>${pdfStyle}</style></head><body>${html}</body></html>`;
     let iframe = document.getElementById('_print_iframe');
     if (!iframe) {
       iframe = document.createElement('iframe');
@@ -1007,76 +1002,96 @@ function exportQuotePdf(quoteId){
 
 function renderQuoteHtml(q, issuer, client){
   const dateOnly = formatDateISOtoLocal(q.createdAt);
-  const issuerContact = `${issuer.address ? escapeHtml(issuer.address) + '<br/>' : ''}${issuer.phone ? 'Tel: ' + escapeHtml(issuer.phone) : ''}`;
-  const clientContact = `${client.address ? escapeHtml(client.address) + '<br/>' : ''}${client.phone ? 'Tel: ' + escapeHtml(client.phone) : ''}`;
   const logoHtml = issuer.logo
-    ? `<div style="text-align:center;margin-bottom:24px;"><img src="${issuer.logo}" alt="Logo" style="max-height:120px;max-width:300px;object-fit:contain;" /></div>`
+    ? `<div style="text-align:center;margin-bottom:20px;"><img src="${issuer.logo}" alt="Logo" style="max-height:100px;max-width:260px;object-fit:contain;" /></div>`
     : '';
 
+  const issuerBlock = `
+    <div style="font-size:10px;font-weight:700;color:#0d7de0;letter-spacing:1px;margin-bottom:8px;">EMISSOR</div>
+    <div style="font-size:15px;font-weight:700;color:#1a1a1a;margin-bottom:4px;">${escapeHtml(issuer.name||'—')}</div>
+    ${issuer.cnpjCpf ? `<div style="font-size:12px;color:#6b7280;margin-bottom:2px;">CNPJ/CPF: ${escapeHtml(issuer.cnpjCpf)}</div>` : ''}
+    ${issuer.address  ? `<div style="font-size:12px;color:#4b5563;margin-bottom:2px;">${escapeHtml(issuer.address)}</div>` : ''}
+    ${issuer.phone    ? `<div style="font-size:12px;color:#4b5563;">Tel: ${escapeHtml(issuer.phone)}</div>` : ''}
+  `;
+
+  const clientBlock = `
+    <div style="font-size:10px;font-weight:700;color:#0d7de0;letter-spacing:1px;margin-bottom:8px;">DESTINATÁRIO</div>
+    <div style="font-size:15px;font-weight:700;color:#1a1a1a;margin-bottom:4px;">${escapeHtml(client.name||'—')}</div>
+    ${client.cnpjCpf ? `<div style="font-size:12px;color:#6b7280;margin-bottom:2px;">CNPJ/CPF: ${escapeHtml(client.cnpjCpf)}</div>` : ''}
+    ${client.address  ? `<div style="font-size:12px;color:#4b5563;margin-bottom:2px;">${escapeHtml(client.address)}</div>` : ''}
+    ${client.phone    ? `<div style="font-size:12px;color:#4b5563;">Tel: ${escapeHtml(client.phone)}</div>` : ''}
+  `;
+
+  const itemRows = q.items.map(it => `
+    <tr>
+      <td style="padding:10px 8px;border-bottom:1px solid #e5e7eb;word-break:break-word;font-size:13px;">${escapeHtml(it.descricao||'')}</td>
+      <td style="padding:10px 8px;border-bottom:1px solid #e5e7eb;text-align:center;white-space:nowrap;font-size:13px;">${it.quantidade}</td>
+      <td style="padding:10px 8px;border-bottom:1px solid #e5e7eb;text-align:right;white-space:nowrap;font-size:13px;">R$ ${money(it.valorUnitario)}</td>
+      <td style="padding:10px 8px;border-bottom:1px solid #e5e7eb;text-align:right;white-space:nowrap;font-size:13px;font-weight:700;">R$ ${money((it.quantidade||0)*(it.valorUnitario||0))}</td>
+    </tr>`).join('');
+
+  const notesHtml = q.notes ? `
+    <div style="margin-top:20px;padding:14px;background:#fffbeb;border-left:4px solid #f59e0b;border-radius:4px;">
+      <strong style="color:#92400e;font-size:13px;">Observações:</strong>
+      <div style="margin-top:6px;color:#78350f;font-size:13px;white-space:pre-wrap;">${escapeHtml(q.notes)}</div>
+    </div>` : '';
+
   return `
-    <div style="max-width:800px;margin:0 auto;padding:20px;">
+    <div style="font-family:Arial,Helvetica,sans-serif;max-width:760px;margin:0 auto;padding:16px;color:#1a1a1a;">
+
       ${logoHtml}
-      <div style="text-align:center;margin-bottom:30px;">
-        <h1 style="color:#0d7de0;margin:0;font-size:28px;">ORÇAMENTO</h1>
-        <h2 style="margin:8px 0;font-size:22px;">${escapeHtml(q.numero || q.id)}</h2>
+
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="font-size:24px;font-weight:800;color:#0d7de0;letter-spacing:2px;">ORÇAMENTO</div>
+        <div style="font-size:17px;font-weight:600;margin-top:6px;">${escapeHtml(q.numero || q.id)}</div>
       </div>
-      
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-bottom:30px;">
-        <div style="padding:16px;background:#f9fafb;border-radius:8px;">
-          <h3 style="margin:0 0 12px 0;color:#0d7de0;font-size:16px;">EMISSOR</h3>
-          <strong style="font-size:16px;">${escapeHtml(issuer.name||'—')}</strong>
-          ${issuer.cnpjCpf? '<div style="font-size:13px;color:#6b7280;margin-top:6px;"><span>CNPJ/CPF:</span> ' + escapeHtml(issuer.cnpjCpf) + '</div>':''}
-          <div style="font-size:14px;color:#4b5563;margin-top:2px;">${issuerContact}</div>
-        </div>
-        <div style="padding:16px;background:#f9fafb;border-radius:8px;">
-          <h3 style="margin:0 0 12px 0;color:#0d7de0;font-size:16px;">DESTINATÁRIO</h3>
-          <strong style="font-size:16px;">${escapeHtml(client.name||'—')}</strong>
-          ${client.cnpjCpf? '<div style="font-size:13px;color:#6b7280;margin-top:6px;"><span>CNPJ/CPF:</span> ' + escapeHtml(client.cnpjCpf) + '</div>':''}
-          <div style="font-size:14px;color:#4b5563;margin-top:2px;">${clientContact}</div>
-        </div>
-      </div>
-      
-      <table style="margin-top:24px;table-layout:auto;width:100%;">
-        <thead>
-          <tr>
-            <th style="text-align:left;word-break:break-word;">Descrição</th>
-            <th style="text-align:center;white-space:nowrap;width:1%;padding-left:16px;padding-right:16px;">Qtd</th>
-            <th style="text-align:right;white-space:nowrap;width:1%;padding-left:16px;padding-right:16px;">Valor Unit.</th>
-            <th style="text-align:right;white-space:nowrap;width:1%;padding-left:16px;padding-right:16px;">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${q.items.map(it=>`<tr>
-            <td style="word-break:break-word;">${escapeHtml(it.descricao||'')}</td>
-            <td style="text-align:center;white-space:nowrap;">${it.quantidade}</td>
-            <td style="text-align:right;white-space:nowrap;">R$ ${money(it.valorUnitario)}</td>
-            <td style="text-align:right;white-space:nowrap;"><strong>R$ ${money((it.quantidade||0)*(it.valorUnitario||0))}</strong></td>
-          </tr>`).join('')}
-        </tbody>
+
+      <!-- EMISSOR + DESTINATÁRIO via TABLE (funciona em print mobile) -->
+      <table style="width:100%;border-collapse:collapse;margin-bottom:24px;" cellspacing="0" cellpadding="0">
+        <tr>
+          <td style="width:49%;padding:14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;vertical-align:top;">
+            ${issuerBlock}
+          </td>
+          <td style="width:2%;"></td>
+          <td style="width:49%;padding:14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;vertical-align:top;">
+            ${clientBlock}
+          </td>
+        </tr>
       </table>
 
-      <div style="page-break-inside:avoid;margin-top:0;">
-        <table style="width:100%;border-collapse:collapse;">
-          <tr>
-            <td colspan="3" style="text-align:right;font-weight:700;font-size:18px;color:#0d7de0;padding:10px;border:1px solid #e5e7eb;">TOTAL:</td>
-            <td style="text-align:right;font-weight:700;font-size:18px;color:#0d7de0;padding:10px;border:1px solid #e5e7eb;">R$ ${money(q.total)}</td>
+      <!-- ITENS -->
+      <table style="width:100%;border-collapse:collapse;margin-bottom:0;">
+        <thead>
+          <tr style="background:#f3f4f6;">
+            <th style="padding:10px 8px;text-align:left;font-size:12px;font-weight:700;color:#374151;border-bottom:2px solid #e5e7eb;word-break:break-word;">Descrição</th>
+            <th style="padding:10px 8px;text-align:center;font-size:12px;font-weight:700;color:#374151;border-bottom:2px solid #e5e7eb;white-space:nowrap;width:8%;">Qtd</th>
+            <th style="padding:10px 8px;text-align:right;font-size:12px;font-weight:700;color:#374151;border-bottom:2px solid #e5e7eb;white-space:nowrap;width:20%;">Valor Unit.</th>
+            <th style="padding:10px 8px;text-align:right;font-size:12px;font-weight:700;color:#374151;border-bottom:2px solid #e5e7eb;white-space:nowrap;width:20%;">Total</th>
           </tr>
-        </table>
+        </thead>
+        <tbody>${itemRows}</tbody>
+      </table>
+
+      <!-- TOTAL -->
+      <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+        <tr>
+          <td style="padding:12px 8px;text-align:right;font-weight:700;font-size:15px;color:#0d7de0;border-top:2px solid #0d7de0;" colspan="3">TOTAL:</td>
+          <td style="padding:12px 8px;text-align:right;font-weight:800;font-size:16px;color:#0d7de0;border-top:2px solid #0d7de0;white-space:nowrap;width:20%;">R$ ${money(q.total)}</td>
+        </tr>
+      </table>
+
+      ${notesHtml}
+
+      <!-- ASSINATURA -->
+      <div style="margin-top:80px;margin-bottom:30px;text-align:center;">
+        <div style="width:55%;border-top:1.5px solid #1a1a1a;margin:0 auto;"></div>
+        <div style="font-weight:700;font-size:13px;margin-top:8px;">${escapeHtml(issuer.name||'')}</div>
       </div>
 
-      ${q.notes ? `<div style="margin-top:24px;padding:16px;background:#fffbeb;border-left:4px solid #f59e0b;border-radius:4px;">
-        <strong style="color:#92400e;">Observações:</strong>
-        <div style="margin-top:8px;color:#78350f;white-space:pre-wrap;">${escapeHtml(q.notes)}</div>
-      </div>` : ''}
-
-      <div class="signature" style="margin-top:160px;margin-bottom:40px;display:flex;flex-direction:column;align-items:center;gap:8px;">
-        <div class="sig-line" style="width:60%;border-top:2px solid #1a1a1a;"></div>
-        <div class="sig-name" style="font-weight:600;font-size:0.95rem;margin-top:8px;">${escapeHtml(issuer.name || '')}</div>
-      </div>
-
-      <div class="print-footer" style="text-align:center;">
+      <div style="text-align:center;font-size:11px;color:#9ca3af;margin-top:16px;">
         Orçamento gerado em: ${escapeHtml(dateOnly)}
       </div>
+
     </div>
   `;
 }
