@@ -1131,8 +1131,135 @@ function generatePDFFromQuote(quoteId) {
     if (!q) { showNotification("Orçamento não encontrado", "error"); return; }
     const issuer = store.issuers.find(i => i.id === q.issuerId) || {};
     const client = store.clients.find(c => c.id === q.clientId) || {};
-    const html = renderQuoteHtml(q, issuer, client);
-    triggerPrint(html, `Orçamento ${escapeHtml(q.numero || q.id)}`);
+
+    const dateOnly = formatDateISOtoLocal(q.createdAt);
+    const moneyFmt = (v) => parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+
+    const logoHtml = issuer.logo
+      ? `<p style="text-align:center;margin-bottom:12px;"><img src="${issuer.logo}" style="max-height:100px;max-width:260px;" /></p>`
+      : '';
+
+    const itemRows = (q.items||[]).map(it => `
+      <tr>
+        <td style="border:1px solid #cccccc;padding:8px 10px;font-size:11pt;">${escapeHtml(it.descricao||'')}</td>
+        <td style="border:1px solid #cccccc;padding:8px 10px;text-align:center;font-size:11pt;">${it.quantidade}</td>
+        <td style="border:1px solid #cccccc;padding:8px 10px;text-align:right;font-size:11pt;">R$ ${moneyFmt(it.valorUnitario)}</td>
+        <td style="border:1px solid #cccccc;padding:8px 10px;text-align:right;font-size:11pt;font-weight:bold;">R$ ${moneyFmt((it.quantidade||0)*(it.valorUnitario||0))}</td>
+      </tr>`).join('');
+
+    const notesHtml = q.notes ? `
+      <p style="margin-top:20px;padding:10px;background:#fffbeb;border-left:3px solid #f59e0b;font-size:10pt;">
+        <strong>Observações:</strong><br/>${escapeHtml(q.notes).replace(/\n/g,'<br/>')}
+      </p>` : '';
+
+    const fullDoc = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Orçamento ${escapeHtml(q.numero||q.id)}</title>
+  <style>
+    *{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+    @page{margin:2cm;size:A4 portrait;}
+    body{font-family:Arial,Helvetica,sans-serif;font-size:11pt;color:#1a1a1a;margin:0;padding:24px;max-width:780px;margin:0 auto;}
+    p{margin:0 0 4px 0;padding:0;}
+    .titulo{font-size:18pt;color:#0d7de0;text-align:center;font-weight:bold;letter-spacing:2px;margin:8px 0 2px 0;}
+    .numero{font-size:13pt;text-align:center;font-weight:normal;margin:0 0 6px 0;}
+    .gerado{font-size:9pt;text-align:center;color:#6b7280;margin:0 0 20px 0;}
+    table.layout{width:100%;border-collapse:collapse;margin-bottom:20px;}
+    table.layout td{vertical-align:top;}
+    .box{padding:10px 14px;border:1pt solid #e0e0e0;background:#f9fafb;}
+    .label{font-size:9pt;color:#0d7de0;font-weight:bold;letter-spacing:1px;margin-bottom:5px;display:block;}
+    .name{font-size:12pt;font-weight:bold;margin-bottom:3px;display:block;}
+    .cnpj{font-size:9pt;color:#6b7280;margin:2px 0;display:block;}
+    .info{font-size:9pt;color:#555555;margin:1px 0;display:block;}
+    table.items{width:100%;border-collapse:collapse;margin-top:10px;margin-bottom:0;}
+    table.items th{background:#f2f2f2;border:1pt solid #cccccc;padding:7px 10px;font-size:10pt;font-weight:bold;}
+    table.items td{border:1pt solid #cccccc;padding:7px 10px;font-size:10pt;}
+    .th-desc{text-align:left;width:55%;}
+    .th-qtd{text-align:center;width:10%;}
+    .th-unit{text-align:right;width:17%;}
+    .th-total{text-align:right;width:18%;}
+    table.total-sep{width:100%;border-collapse:collapse;margin-top:14px;margin-bottom:10px;}
+    table.total-sep td{border:2pt solid #93c5fd;padding:9px 10px;background:#eef6ff;}
+    .total-label{text-align:right;font-weight:bold;color:#0d7de0;font-size:11pt;}
+    .total-value{text-align:right;font-weight:bold;color:#0d7de0;font-size:12pt;white-space:nowrap;width:22%;}
+    .sig-block{text-align:center;margin-top:160px;margin-bottom:40px;page-break-inside:avoid;}
+    .sig-hr{display:inline-block;width:55%;border-top:1.5pt solid #1a1a1a;}
+    .sig-name{font-size:10pt;font-weight:bold;text-align:center;margin-top:6px;}
+    .footer{text-align:center;font-size:9pt;color:#888888;margin-top:16px;border-top:1px solid #e5e7eb;padding-top:8px;}
+    @media print{body{padding:0;}}
+  </style>
+</head>
+<body>
+
+  ${logoHtml}
+
+  <p class="titulo">ORÇAMENTO</p>
+  <p class="numero">${escapeHtml(q.numero||q.id)}</p>
+  <p class="gerado">Gerado em: ${dateOnly}</p>
+
+  <table class="layout" cellspacing="0" cellpadding="0">
+    <tr>
+      <td style="width:49%;" class="box">
+        <span class="label">EMISSOR</span>
+        <span class="name">${escapeHtml(issuer.name||'—')}</span>
+        ${issuer.cnpjCpf ? `<span class="cnpj">CNPJ/CPF: ${escapeHtml(issuer.cnpjCpf)}</span>` : ''}
+        ${issuer.address  ? `<span class="info">${escapeHtml(issuer.address)}</span>` : ''}
+        ${issuer.phone    ? `<span class="info">Tel: ${escapeHtml(issuer.phone)}</span>` : ''}
+      </td>
+      <td style="width:2%;"></td>
+      <td style="width:49%;" class="box">
+        <span class="label">DESTINATÁRIO</span>
+        <span class="name">${escapeHtml(client.name||'—')}</span>
+        ${client.cnpjCpf ? `<span class="cnpj">CNPJ/CPF: ${escapeHtml(client.cnpjCpf)}</span>` : ''}
+        ${client.address  ? `<span class="info">${escapeHtml(client.address)}</span>` : ''}
+        ${client.phone    ? `<span class="info">Tel: ${escapeHtml(client.phone)}</span>` : ''}
+      </td>
+    </tr>
+  </table>
+
+  <table class="items" cellspacing="0" cellpadding="0">
+    <thead>
+      <tr>
+        <th class="th-desc">Descrição</th>
+        <th class="th-qtd">Qtd</th>
+        <th class="th-unit">Valor Unit.</th>
+        <th class="th-total">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${itemRows}
+    </tbody>
+  </table>
+
+  <table class="total-sep" cellspacing="0" cellpadding="0">
+    <tr>
+      <td class="total-label">TOTAL:</td>
+      <td class="total-value">R$ ${moneyFmt(q.total||0)}</td>
+    </tr>
+  </table>
+
+  ${notesHtml}
+
+  <div class="sig-block">
+    <div class="sig-hr"></div>
+    <p class="sig-name">${escapeHtml(issuer.name||'')}</p>
+  </div>
+
+  <p class="footer">Orçamento gerado em: ${dateOnly}</p>
+
+  <script>window.onload = function(){ window.print(); }</script>
+</body>
+</html>`;
+
+    // Abre numa nova aba e dispara impressão — o usuário salva como PDF
+    const blob = new Blob([fullDoc], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, '_blank');
+    if (!win) {
+      showNotification("Permita popups para este site e tente novamente.", "error");
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
   } catch (err) {
     console.error("[ERROR] generatePDFFromQuote:", err);
     showNotification("Erro ao gerar PDF", "error");
