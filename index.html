@@ -981,7 +981,10 @@
       <h3 style="margin-bottom:20px;font-size:20px;">Visualização do Orçamento</h3>
       <div id="previewArea" style="border:1px solid #e5e7eb;padding:20px;border-radius:8px;background:#fff;"></div>
       <div class="modal-actions">
-        <button id="printBtn" class="btn btn-primary">🖨️ Imprimir / Salvar PDF</button>
+        <div class="modal-actions">
+  <button id="downloadPdfBtn" class="btn btn-primary">📥 Baixar PDF</button>
+  <button id="printBtn" class="btn btn-outline">🖨️ Imprimir</button>
+</div>
       </div>
     </div>
   </div>
@@ -1015,6 +1018,12 @@
         }
       });
     });
+
+    document.getElementById('downloadPdfBtn').addEventListener('click', () => {
+  if (currentPreviewQuoteId) {
+    generatePDFFromQuote(currentPreviewQuoteId);
+  }
+});
   </script>
 
   <script src="app.js"></script>
