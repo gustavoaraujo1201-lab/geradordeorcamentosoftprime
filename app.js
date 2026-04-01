@@ -970,10 +970,24 @@ function exportQuoteDoc(quoteId){
 function getPrintCss() {
   return `
     *{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#1a1a1a;background:#fff;padding:24px;max-width:780px;margin:0 auto;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+    body{
+      font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#1a1a1a;
+      background:#fff;padding:24px;max-width:780px;margin:0 auto;
+      -webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;
+    }
     table{border-collapse:collapse;width:100%;}
     img{max-width:100%;height:auto;display:block;}
-    @media print{body{padding:0;}@page{margin:1.5cm;size:A4 portrait;}}
+    /* Garante que fundos coloridos (total azul) aparecem no PDF salvo */
+    td,th{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+    @media screen and (max-width:600px){
+      body{padding:12px;}
+      table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    }
+    @media print{
+      body{padding:0;}
+      /* @page sem margin-top evita que Chrome/Edge coloquem cabeçalho/rodapé próprios sobre o conteúdo */
+      @page{margin:1.5cm;size:A4 portrait;}
+    }
   `;
 }
 
@@ -1104,71 +1118,29 @@ function renderQuoteHtml(q, issuer, client){
       </table>
 
       <!-- TOTAL — tabela SEPARADA, com margem acima para criar distância visual -->
+      <!-- print-color-adjust:exact garante fundo azul no PDF salvo -->
       <table style="width:100%;border-collapse:collapse;margin-top:14px;margin-bottom:20px;table-layout:auto;">
-        <tr style="background:#eef6ff;">
-          <td style="padding:12px 10px;text-align:right;font-weight:700;font-size:14px;color:#0d7de0;border:2px solid #bfdbfe;">TOTAL:</td>
-          <td style="padding:12px 10px;text-align:right;font-weight:800;font-size:16px;color:#0d7de0;border:2px solid #bfdbfe;white-space:nowrap;width:20%;">R$ ${money(q.total)}</td>
+        <tr>
+          <td style="padding:12px 10px;text-align:right;font-weight:700;font-size:14px;color:#0d7de0;border:2px solid #bfdbfe;background:#eef6ff;-webkit-print-color-adjust:exact;print-color-adjust:exact;">TOTAL:</td>
+          <td style="padding:12px 10px;text-align:right;font-weight:800;font-size:16px;color:#0d7de0;border:2px solid #bfdbfe;white-space:nowrap;width:20%;background:#eef6ff;-webkit-print-color-adjust:exact;print-color-adjust:exact;">R$ ${money(q.total)}</td>
         </tr>
       </table>
 
       ${notesHtml}
 
-      <!-- ASSINATURA — bem abaixo na folha -->
-      <div style="margin-top:280px;margin-bottom:30px;text-align:center;page-break-inside:avoid;">
+      <!-- ASSINATURA — empurrada para baixo com margin-top grande (funciona em PDF) -->
+      <div style="margin-top:260px;margin-bottom:16px;text-align:center;page-break-inside:avoid;">
         <div style="width:55%;border-top:1.5px solid #1a1a1a;margin:0 auto;"></div>
         <div style="font-weight:700;font-size:13px;margin-top:8px;">${escapeHtml(issuer.name||'')}</div>
       </div>
 
-      <!-- DATA no rodapé fixo -->
-      <div style="position:fixed;bottom:16px;left:0;right:0;text-align:center;font-size:10px;color:#9ca3af;">
+      <!-- RODAPÉ — SEM position:fixed (não funciona em PDF); usa borda superior e posição estática -->
+      <div style="margin-top:24px;text-align:center;font-size:10px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:8px;">
         Orçamento gerado em: ${escapeHtml(dateOnly)}
       </div>
 
     </div>
   `;
-}
-
-// GERA E FAZ DOWNLOAD DO PDF (usa html2pdf.js se disponível, senão abre print)
-function generatePDFFromQuote(quoteId) {
-  try {
-    const q = store.quotes.find(x => x.id === quoteId);
-    if (!q) { showNotification("Orçamento não encontrado", "error"); return; }
-    const issuer = store.issuers.find(i => i.id === q.issuerId) || {};
-    const client = store.clients.find(c => c.id === q.clientId) || {};
-    const html = renderQuoteHtml(q, issuer, client);
-
-    // Primeiro tenta usar html2pdf (gera arquivo e força download)
-    if (window.html2pdf) {
-      const opt = {
-        margin:       12,
-        filename:     `orcamento_${(q.numero || q.id).replace(/\s+/g,'_')}.pdf`,
-        image:        { type: 'jpeg', quality: 0.95 },
-        html2canvas:  { scale: Math.max(1, (window.devicePixelRatio || 1)) },
-        jsPDF:        { unit: 'pt', format: 'a4', orientation: 'portrait' }
-      };
-      // Cria container temporário (invisible) para garantir estilos
-      const container = document.createElement('div');
-      container.style.visibility = 'hidden';
-      container.style.position = 'fixed';
-      container.style.left = '-9999px';
-      container.innerHTML = `<div style="max-width:760px;margin:0 auto;">${html}</div>`;
-      document.body.appendChild(container);
-
-      window.html2pdf().set(opt).from(container).save()
-        .then(() => { document.body.removeChild(container); showNotification("✅ PDF gerado com sucesso!", "success"); })
-        .catch(err => { document.body.removeChild(container); console.error(err); showNotification("Erro ao gerar PDF", "error"); });
-
-      return;
-    }
-
-    // Fallback: abre diálogo de impressão (usuário escolhe "Salvar como PDF")
-    triggerPrint(html, `Orçamento ${escapeHtml(q.numero || q.id)}`);
-    showNotification("📤 Abra o diálogo de impressão para salvar como PDF (fallback).", "info");
-
-  } catch (err) {
-    console.error("[ERROR] generatePDFFromQuote:", err);
-    showNotification("Erro ao gerar PDF", "error");
-  }
 }
 
 function attachQuoteListListeners(){
@@ -1187,241 +1159,24 @@ function attachQuoteListListeners(){
     });
   });
 }
-// ========== PDF EXPORT FUNCTION ==========
+// ========== PDF / PRINT EXPORT ==========
+// Usa o diálogo nativo do browser — garante PDF idêntico ao que aparece na tela
 function generatePDFFromQuote(quoteId) {
   try {
     const q = store.quotes.find(x => x.id === quoteId);
-    if (!q) {
-      showNotification("Orçamento não encontrado", "error");
-      return;
-    }
-
+    if (!q) { showNotification("Orçamento não encontrado", "error"); return; }
     const issuer = store.issuers.find(i => i.id === q.issuerId) || {};
     const client = store.clients.find(c => c.id === q.clientId) || {};
-    const dateOnly = formatDateISOtoLocal(q.createdAt);
-
-    // Cria o elemento HTML que será convertido em PDF
-    const element = document.createElement('div');
-    element.innerHTML = `
-      <div style="font-family: Arial, sans-serif; padding: 20px; color: #1a1a1a;">
-        
-        <!-- Logo do emissor (se existir) -->
-        ${issuer.logo ? `<div style="text-align: center; margin-bottom: 20px;">
-          <img src="${issuer.logo}" style="max-height: 80px; max-width: 250px;" />
-        </div>` : ''}
-
-        <!-- Título -->
-        <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="font-size: 28px; color: #0d7de0; margin: 0 0 8px 0;">ORÇAMENTO</h1>
-          <p style="font-size: 18px; font-weight: bold; margin: 0; color: #1a1a1a;">${escapeHtml(q.numero || q.id)}</p>
-          <p style="font-size: 12px; color: #6b7278; margin: 8px 0 0 0;">Gerado em: ${dateOnly}</p>
-        </div>
-
-        <!-- Dados Emissor e Cliente -->
-        <table style="width: 100%; margin-bottom: 30px; border-collapse: collapse;">
-          <tr>
-            <td style="width: 50%; padding-right: 20px; vertical-align: top;">
-              <h3 style="font-size: 12px; font-weight: bold; color: #0d7de0; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 1px;">Emissor</h3>
-              <p style="margin: 0 0 4px 0; font-weight: bold; font-size: 14px;">${escapeHtml(issuer.name || '—')}</p>
-              ${issuer.cnpjCpf ? `<p style="margin: 0 0 2px 0; font-size: 12px; color: #6b7278;">CNPJ/CPF: ${escapeHtml(issuer.cnpjCpf)}</p>` : ''}
-              ${issuer.phone ? `<p style="margin: 0 0 2px 0; font-size: 12px; color: #6b7278;">Tel: ${escapeHtml(issuer.phone)}</p>` : ''}
-              ${issuer.address ? `<p style="margin: 0; font-size: 12px; color: #6b7278;">${escapeHtml(issuer.address)}</p>` : ''}
-            </td>
-            <td style="width: 50%; padding-left: 20px; vertical-align: top; border-left: 1px solid #e5e7eb;">
-              <h3 style="font-size: 12px; font-weight: bold; color: #0d7de0; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 1px;">Destinatário</h3>
-              <p style="margin: 0 0 4px 0; font-weight: bold; font-size: 14px;">${escapeHtml(client.name || '—')}</p>
-              ${client.cnpjCpf ? `<p style="margin: 0 0 2px 0; font-size: 12px; color: #6b7278;">CNPJ/CPF: ${escapeHtml(client.cnpjCpf)}</p>` : ''}
-              ${client.phone ? `<p style="margin: 0 0 2px 0; font-size: 12px; color: #6b7278;">Tel: ${escapeHtml(client.phone)}</p>` : ''}
-              ${client.address ? `<p style="margin: 0; font-size: 12px; color: #6b7278;">${escapeHtml(client.address)}</p>` : ''}
-            </td>
-          </tr>
-        </table>
-
-        <!-- Tabela de Itens -->
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-          <thead>
-            <tr style="background-color: #f3f4f6;">
-              <th style="padding: 10px; text-align: left; border: 1px solid #e5e7eb; font-weight: bold; font-size: 12px;">Descrição</th>
-              <th style="padding: 10px; text-align: center; border: 1px solid #e5e7eb; font-weight: bold; font-size: 12px; width: 80px;">Qtd</th>
-              <th style="padding: 10px; text-align: right; border: 1px solid #e5e7eb; font-weight: bold; font-size: 12px; width: 120px;">Valor Unit.</th>
-              <th style="padding: 10px; text-align: right; border: 1px solid #e5e7eb; font-weight: bold; font-size: 12px; width: 120px;">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${(q.items || []).map(it => `
-              <tr>
-                <td style="padding: 10px; border: 1px solid #e5e7eb; font-size: 12px;">${escapeHtml(it.descricao || '')}</td>
-                <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center; font-size: 12px;">${it.quantidade}</td>
-                <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; font-size: 12px;">R$ ${money(it.valorUnitario)}</td>
-                <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; font-size: 12px; font-weight: bold;">R$ ${money((it.quantidade || 0) * (it.valorUnitario || 0))}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-
-        <!-- Totais -->
-        <div style="text-align: right; margin-bottom: 30px;">
-          <div style="display: inline-block; border: 2px solid #0d7de0; background: #eff6ff; padding: 15px 25px; border-radius: 8px;">
-            <p style="margin: 0 0 8px 0; font-size: 12px; color: #6b7278;">TOTAL</p>
-            <p style="margin: 0; font-size: 24px; font-weight: bold; color: #0d7de0;">R$ ${money(q.total || 0)}</p>
-          </div>
-        </div>
-
-        <!-- Observações -->
-        ${q.notes ? `
-          <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 15px; margin-bottom: 30px; border-radius: 4px;">
-            <h4 style="margin: 0 0 8px 0; font-size: 12px; font-weight: bold; color: #92400e;">Observações</h4>
-            <p style="margin: 0; font-size: 12px; color: #78350f; white-space: pre-wrap;">${escapeHtml(q.notes)}</p>
-          </div>
-        ` : ''}
-
-        <!-- Assinatura -->
-        <div style="margin-top: 60px; text-align: center;">
-          <div style="border-top: 2px solid #1a1a1a; width: 60%; margin: 0 auto 8px; height: 1px;"></div>
-          <p style="margin: 0; font-weight: bold; font-size: 12px; color: #1a1a1a;">${escapeHtml(issuer.name || '')}</p>
-        </div>
-      </div>
-    `;
-
-    // Opções do html2pdf
-    const options = {
-      margin: [10, 10, 10, 10], // margem em mm
-      filename: `orcamento_${q.numero || q.id}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
-    };
-
-    // Gera o PDF
-    html2pdf().set(options).from(element).save();
-    showNotification("✅ PDF baixado com sucesso!", "success");
-
+    const html = renderQuoteHtml(q, issuer, client);
+    triggerPrint(html, `Orçamento ${escapeHtml(q.numero || q.id)}`);
   } catch (err) {
     console.error("[ERROR] generatePDFFromQuote:", err);
-    showNotification("Erro ao gerar PDF. Tente novamente.", "error");
-  }
-}
-
-// ========== PDF EXPORT COM HTML2PDF ==========
-let currentPreviewQuoteId = null;
-
-function generatePDFFromQuote(quoteId) {
-  try {
-    const q = store.quotes.find(x => x.id === quoteId);
-    if (!q) {
-      showNotification("Orçamento não encontrado", "error");
-      return;
-    }
-
-    const issuer = store.issuers.find(i => i.id === q.issuerId) || {};
-    const client = store.clients.find(c => c.id === q.clientId) || {};
-    const dateOnly = formatDateISOtoLocal(q.createdAt);
-
-    // Verifica se html2pdf está disponível
-    if (typeof html2pdf === 'undefined') {
-      showNotification("Biblioteca PDF não carregada. Tente novamente.", "error");
-      console.error('html2pdf não está disponível');
-      return;
-    }
-
-    // Cria elemento para conversão
-    const element = document.createElement('div');
-    element.style.padding = '20px';
-    element.style.fontFamily = 'Arial, sans-serif';
-    element.style.color = '#1a1a1a';
-    element.style.backgroundColor = '#fff';
-
-    // Conteúdo do PDF
-    const htmlContent = `
-      <div style="text-align: center; margin-bottom: 30px;">
-        ${issuer.logo ? `<img src="${issuer.logo}" style="max-height: 80px; max-width: 250px; margin-bottom: 20px;" />` : ''}
-        <h1 style="font-size: 32px; color: #0d7de0; margin: 0 0 8px 0;">ORÇAMENTO</h1>
-        <h2 style="font-size: 20px; margin: 0 0 8px 0; color: #1a1a1a;">${escapeHtml(q.numero || q.id)}</h2>
-        <p style="font-size: 12px; color: #6b7278; margin: 8px 0 0 0;">Gerado em: ${dateOnly}</p>
-      </div>
-
-      <table style="width: 100%; margin-bottom: 30px; border-collapse: collapse;">
-        <tr>
-          <td style="width: 50%; padding: 15px; background: #f9fafb; border: 1px solid #e5e7eb; vertical-align: top;">
-            <h3 style="font-size: 12px; color: #0d7de0; text-transform: uppercase; margin: 0 0 10px 0; font-weight: bold;">Emissor</h3>
-            <p style="margin: 0 0 5px 0; font-weight: bold; font-size: 14px;">${escapeHtml(issuer.name || '—')}</p>
-            ${issuer.cnpjCpf ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: #6b7278;">CNPJ/CPF: ${escapeHtml(issuer.cnpjCpf)}</p>` : ''}
-            ${issuer.phone ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: #6b7278;">Tel: ${escapeHtml(issuer.phone)}</p>` : ''}
-            ${issuer.address ? `<p style="margin: 0; font-size: 12px; color: #6b7278;">${escapeHtml(issuer.address)}</p>` : ''}
-          </td>
-          <td style="width: 50%; padding: 15px; background: #f9fafb; border: 1px solid #e5e7eb; vertical-align: top;">
-            <h3 style="font-size: 12px; color: #0d7de0; text-transform: uppercase; margin: 0 0 10px 0; font-weight: bold;">Destinatário</h3>
-            <p style="margin: 0 0 5px 0; font-weight: bold; font-size: 14px;">${escapeHtml(client.name || '—')}</p>
-            ${client.cnpjCpf ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: #6b7278;">CNPJ/CPF: ${escapeHtml(client.cnpjCpf)}</p>` : ''}
-            ${client.phone ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: #6b7278;">Tel: ${escapeHtml(client.phone)}</p>` : ''}
-            ${client.address ? `<p style="margin: 0; font-size: 12px; color: #6b7278;">${escapeHtml(client.address)}</p>` : ''}
-          </td>
-        </tr>
-      </table>
-
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-        <thead>
-          <tr style="background-color: #f3f4f6;">
-            <th style="padding: 10px; text-align: left; border: 1px solid #e5e7eb; font-weight: bold; font-size: 12px;">Descrição</th>
-            <th style="padding: 10px; text-align: center; border: 1px solid #e5e7eb; font-weight: bold; font-size: 12px; width: 80px;">Qtd</th>
-            <th style="padding: 10px; text-align: right; border: 1px solid #e5e7eb; font-weight: bold; font-size: 12px; width: 100px;">Valor Unit.</th>
-            <th style="padding: 10px; text-align: right; border: 1px solid #e5e7eb; font-weight: bold; font-size: 12px; width: 100px;">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${(q.items || []).map(it => `
-            <tr>
-              <td style="padding: 10px; border: 1px solid #e5e7eb; font-size: 12px;">${escapeHtml(it.descricao || '')}</td>
-              <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center; font-size: 12px;">${it.quantidade}</td>
-              <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; font-size: 12px;">R$ ${money(it.valorUnitario)}</td>
-              <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; font-size: 12px; font-weight: bold;">R$ ${money((it.quantidade || 0) * (it.valorUnitario || 0))}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-
-      <div style="text-align: right; margin-bottom: 30px;">
-        <div style="display: inline-block; border: 2px solid #0d7de0; background: #eff6ff; padding: 15px 30px; border-radius: 8px;">
-          <p style="margin: 0 0 8px 0; font-size: 12px; color: #6b7278;">TOTAL</p>
-          <p style="margin: 0; font-size: 24px; font-weight: bold; color: #0d7de0;">R$ ${money(q.total || 0)}</p>
-        </div>
-      </div>
-
-      ${q.notes ? `
-        <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 15px; margin-bottom: 30px; border-radius: 4px;">
-          <h4 style="margin: 0 0 10px 0; font-size: 12px; font-weight: bold; color: #92400e;">Observações</h4>
-          <p style="margin: 0; font-size: 12px; color: #78350f; white-space: pre-wrap;">${escapeHtml(q.notes)}</p>
-        </div>
-      ` : ''}
-
-      <div style="margin-top: 60px; text-align: center;">
-        <div style="border-top: 2px solid #1a1a1a; width: 60%; margin: 0 auto 8px; height: 1px;"></div>
-        <p style="margin: 0; font-weight: bold; font-size: 12px; color: #1a1a1a;">${escapeHtml(issuer.name || '')}</p>
-      </div>
-    `;
-
-    element.innerHTML = htmlContent;
-
-    // Configurações do PDF
-    const options = {
-      margin: 10,
-      filename: `orcamento_${q.numero || q.id}_${new Date().getTime()}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, logging: false },
-      jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
-    };
-
-    // Gera e baixa o PDF
-    html2pdf().set(options).from(element).save();
-    showNotification("✅ PDF baixado com sucesso!", "success");
-
-  } catch (err) {
-    console.error("[ERROR] generatePDFFromQuote:", err);
-    showNotification("Erro ao gerar PDF. Tente novamente.", "error");
+    showNotification("Erro ao gerar PDF", "error");
   }
 }
 
 // ========== INITIALIZATION ==========
+
 function renderAll(){ 
   renderIssuers(); renderClients(); renderQuotes(); renderItems(currentItems); 
 }
