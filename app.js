@@ -739,18 +739,28 @@ if (clearSearch) {
 }
 
 function openPreview(id){
-  const q = store.quotes.find(x=>x.id===id); 
+  const q = store.quotes.find(x=>x.id===id);
   if (!q) { showNotification("Orçamento não encontrado", "error"); return; }
   const issuer = store.issuers.find(i=>i.id===q.issuerId)||{};
   const client = store.clients.find(c=>c.id===q.clientId)||{};
   const html = renderQuoteHtml(q, issuer, client);
   previewArea && (previewArea.innerHTML = html);
   lastPreviewHtml = html;
+  currentPreviewQuoteId = id;
   previewModal && previewModal.classList.remove("hidden");
 }
 
 if (closePreview) {
   closePreview.addEventListener("click", ()=> { previewModal && previewModal.classList.add("hidden"); });
+}
+
+const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+if (downloadPdfBtn) {
+  downloadPdfBtn.addEventListener("click", () => {
+    if (currentPreviewQuoteId) {
+      generatePDFFromQuote(currentPreviewQuoteId);
+    }
+  });
 }
 
 if (printBtn) {
@@ -1240,6 +1250,125 @@ function generatePDFFromQuote(quoteId) {
     };
 
     // Gera o PDF
+    html2pdf().set(options).from(element).save();
+    showNotification("✅ PDF baixado com sucesso!", "success");
+
+  } catch (err) {
+    console.error("[ERROR] generatePDFFromQuote:", err);
+    showNotification("Erro ao gerar PDF. Tente novamente.", "error");
+  }
+}
+
+// ========== PDF EXPORT COM HTML2PDF ==========
+let currentPreviewQuoteId = null;
+
+function generatePDFFromQuote(quoteId) {
+  try {
+    const q = store.quotes.find(x => x.id === quoteId);
+    if (!q) {
+      showNotification("Orçamento não encontrado", "error");
+      return;
+    }
+
+    const issuer = store.issuers.find(i => i.id === q.issuerId) || {};
+    const client = store.clients.find(c => c.id === q.clientId) || {};
+    const dateOnly = formatDateISOtoLocal(q.createdAt);
+
+    // Verifica se html2pdf está disponível
+    if (typeof html2pdf === 'undefined') {
+      showNotification("Biblioteca PDF não carregada. Tente novamente.", "error");
+      console.error('html2pdf não está disponível');
+      return;
+    }
+
+    // Cria elemento para conversão
+    const element = document.createElement('div');
+    element.style.padding = '20px';
+    element.style.fontFamily = 'Arial, sans-serif';
+    element.style.color = '#1a1a1a';
+    element.style.backgroundColor = '#fff';
+
+    // Conteúdo do PDF
+    const htmlContent = `
+      <div style="text-align: center; margin-bottom: 30px;">
+        ${issuer.logo ? `<img src="${issuer.logo}" style="max-height: 80px; max-width: 250px; margin-bottom: 20px;" />` : ''}
+        <h1 style="font-size: 32px; color: #0d7de0; margin: 0 0 8px 0;">ORÇAMENTO</h1>
+        <h2 style="font-size: 20px; margin: 0 0 8px 0; color: #1a1a1a;">${escapeHtml(q.numero || q.id)}</h2>
+        <p style="font-size: 12px; color: #6b7278; margin: 8px 0 0 0;">Gerado em: ${dateOnly}</p>
+      </div>
+
+      <table style="width: 100%; margin-bottom: 30px; border-collapse: collapse;">
+        <tr>
+          <td style="width: 50%; padding: 15px; background: #f9fafb; border: 1px solid #e5e7eb; vertical-align: top;">
+            <h3 style="font-size: 12px; color: #0d7de0; text-transform: uppercase; margin: 0 0 10px 0; font-weight: bold;">Emissor</h3>
+            <p style="margin: 0 0 5px 0; font-weight: bold; font-size: 14px;">${escapeHtml(issuer.name || '—')}</p>
+            ${issuer.cnpjCpf ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: #6b7278;">CNPJ/CPF: ${escapeHtml(issuer.cnpjCpf)}</p>` : ''}
+            ${issuer.phone ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: #6b7278;">Tel: ${escapeHtml(issuer.phone)}</p>` : ''}
+            ${issuer.address ? `<p style="margin: 0; font-size: 12px; color: #6b7278;">${escapeHtml(issuer.address)}</p>` : ''}
+          </td>
+          <td style="width: 50%; padding: 15px; background: #f9fafb; border: 1px solid #e5e7eb; vertical-align: top;">
+            <h3 style="font-size: 12px; color: #0d7de0; text-transform: uppercase; margin: 0 0 10px 0; font-weight: bold;">Destinatário</h3>
+            <p style="margin: 0 0 5px 0; font-weight: bold; font-size: 14px;">${escapeHtml(client.name || '—')}</p>
+            ${client.cnpjCpf ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: #6b7278;">CNPJ/CPF: ${escapeHtml(client.cnpjCpf)}</p>` : ''}
+            ${client.phone ? `<p style="margin: 0 0 3px 0; font-size: 12px; color: #6b7278;">Tel: ${escapeHtml(client.phone)}</p>` : ''}
+            ${client.address ? `<p style="margin: 0; font-size: 12px; color: #6b7278;">${escapeHtml(client.address)}</p>` : ''}
+          </td>
+        </tr>
+      </table>
+
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+        <thead>
+          <tr style="background-color: #f3f4f6;">
+            <th style="padding: 10px; text-align: left; border: 1px solid #e5e7eb; font-weight: bold; font-size: 12px;">Descrição</th>
+            <th style="padding: 10px; text-align: center; border: 1px solid #e5e7eb; font-weight: bold; font-size: 12px; width: 80px;">Qtd</th>
+            <th style="padding: 10px; text-align: right; border: 1px solid #e5e7eb; font-weight: bold; font-size: 12px; width: 100px;">Valor Unit.</th>
+            <th style="padding: 10px; text-align: right; border: 1px solid #e5e7eb; font-weight: bold; font-size: 12px; width: 100px;">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${(q.items || []).map(it => `
+            <tr>
+              <td style="padding: 10px; border: 1px solid #e5e7eb; font-size: 12px;">${escapeHtml(it.descricao || '')}</td>
+              <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center; font-size: 12px;">${it.quantidade}</td>
+              <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; font-size: 12px;">R$ ${money(it.valorUnitario)}</td>
+              <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; font-size: 12px; font-weight: bold;">R$ ${money((it.quantidade || 0) * (it.valorUnitario || 0))}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <div style="text-align: right; margin-bottom: 30px;">
+        <div style="display: inline-block; border: 2px solid #0d7de0; background: #eff6ff; padding: 15px 30px; border-radius: 8px;">
+          <p style="margin: 0 0 8px 0; font-size: 12px; color: #6b7278;">TOTAL</p>
+          <p style="margin: 0; font-size: 24px; font-weight: bold; color: #0d7de0;">R$ ${money(q.total || 0)}</p>
+        </div>
+      </div>
+
+      ${q.notes ? `
+        <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 15px; margin-bottom: 30px; border-radius: 4px;">
+          <h4 style="margin: 0 0 10px 0; font-size: 12px; font-weight: bold; color: #92400e;">Observações</h4>
+          <p style="margin: 0; font-size: 12px; color: #78350f; white-space: pre-wrap;">${escapeHtml(q.notes)}</p>
+        </div>
+      ` : ''}
+
+      <div style="margin-top: 60px; text-align: center;">
+        <div style="border-top: 2px solid #1a1a1a; width: 60%; margin: 0 auto 8px; height: 1px;"></div>
+        <p style="margin: 0; font-weight: bold; font-size: 12px; color: #1a1a1a;">${escapeHtml(issuer.name || '')}</p>
+      </div>
+    `;
+
+    element.innerHTML = htmlContent;
+
+    // Configurações do PDF
+    const options = {
+      margin: 10,
+      filename: `orcamento_${q.numero || q.id}_${new Date().getTime()}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
+      jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+    };
+
+    // Gera e baixa o PDF
     html2pdf().set(options).from(element).save();
     showNotification("✅ PDF baixado com sucesso!", "success");
 
