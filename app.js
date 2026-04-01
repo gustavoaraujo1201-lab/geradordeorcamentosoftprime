@@ -1128,6 +1128,49 @@ function renderQuoteHtml(q, issuer, client){
   `;
 }
 
+// GERA E FAZ DOWNLOAD DO PDF (usa html2pdf.js se disponível, senão abre print)
+function generatePDFFromQuote(quoteId) {
+  try {
+    const q = store.quotes.find(x => x.id === quoteId);
+    if (!q) { showNotification("Orçamento não encontrado", "error"); return; }
+    const issuer = store.issuers.find(i => i.id === q.issuerId) || {};
+    const client = store.clients.find(c => c.id === q.clientId) || {};
+    const html = renderQuoteHtml(q, issuer, client);
+
+    // Primeiro tenta usar html2pdf (gera arquivo e força download)
+    if (window.html2pdf) {
+      const opt = {
+        margin:       12,
+        filename:     `orcamento_${(q.numero || q.id).replace(/\s+/g,'_')}.pdf`,
+        image:        { type: 'jpeg', quality: 0.95 },
+        html2canvas:  { scale: Math.max(1, (window.devicePixelRatio || 1)) },
+        jsPDF:        { unit: 'pt', format: 'a4', orientation: 'portrait' }
+      };
+      // Cria container temporário (invisible) para garantir estilos
+      const container = document.createElement('div');
+      container.style.visibility = 'hidden';
+      container.style.position = 'fixed';
+      container.style.left = '-9999px';
+      container.innerHTML = `<div style="max-width:760px;margin:0 auto;">${html}</div>`;
+      document.body.appendChild(container);
+
+      window.html2pdf().set(opt).from(container).save()
+        .then(() => { document.body.removeChild(container); showNotification("✅ PDF gerado com sucesso!", "success"); })
+        .catch(err => { document.body.removeChild(container); console.error(err); showNotification("Erro ao gerar PDF", "error"); });
+
+      return;
+    }
+
+    // Fallback: abre diálogo de impressão (usuário escolhe "Salvar como PDF")
+    triggerPrint(html, `Orçamento ${escapeHtml(q.numero || q.id)}`);
+    showNotification("📤 Abra o diálogo de impressão para salvar como PDF (fallback).", "info");
+
+  } catch (err) {
+    console.error("[ERROR] generatePDFFromQuote:", err);
+    showNotification("Erro ao gerar PDF", "error");
+  }
+}
+
 function attachQuoteListListeners(){
   if (!quotesList) return;
   quotesList.querySelectorAll(".view-quote").forEach(btn=>{ btn.addEventListener("click",(e)=> openPreview(e.target.dataset.id)); });
