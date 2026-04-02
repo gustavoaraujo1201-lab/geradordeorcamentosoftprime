@@ -125,15 +125,16 @@ class AuthManager {
 
   _isLoginPage() {
     const p = window.location.pathname;
-    return p.endsWith('login.html') || p === '/login' || p === '/login/' || p === '/';
+    return p.endsWith('login.html') || p === '/login' || p === '/login/';
   }
 
   _isAppPage() {
     const p = window.location.pathname;
-    // Reconhece index.html, /, /index e caminhos sem extensão que não sejam login
-    return p.endsWith('index.html') || p === '/index' || p === '/index/'
-        || (p === '/' && !this._isLoginPage())
-        || p === '';
+    // Reconhece as 3 páginas do app: início, cadastro e orçamentos salvos
+    return p.endsWith('index.html')
+        || p.endsWith('cadastro.html')
+        || p.endsWith('orcamentos_salvos.html')
+        || p === '/' || p === '' || p === '/index' || p === '/index/';
   }
 
   // ── Remove a tela de bloqueio ──────────────────────────────────

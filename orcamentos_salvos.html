@@ -115,7 +115,51 @@
       .list li .quote-actions{width:100%;}
     }
   </style>
-  <title>Início — SoftPrime</title>
+  <title>Orçamentos Salvos — SoftPrime</title>
+  <style>
+    .quotes-layout{display:grid;grid-template-columns:240px 1fr;gap:20px;align-items:flex-start;}
+    .qs-filters-card{background:#fff;border:1px solid rgba(20,30,40,0.12);border-radius:10px;padding:18px;box-shadow:0 2px 12px rgba(20,30,40,0.08);margin-bottom:14px;}
+    .qs-filter-title{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px;}
+    .sp-filter-chips{display:flex;flex-direction:column;gap:6px;}
+    .sp-chip{padding:5px 12px;background:#fff;border:1.5px solid #e2e8f0;border-radius:20px;font-size:12px;font-weight:500;color:#475569;cursor:pointer;transition:all 0.15s;font-family:inherit;white-space:normal;word-break:break-word;text-align:left;width:100%;display:block;}
+    .sp-chip:hover{border-color:#0d7de0;color:#0d7de0;}
+    .sp-chip.active{background:#0d7de0;color:#fff;border-color:#0d7de0;box-shadow:0 2px 8px rgba(13,125,224,0.25);}
+    .sp-filter-clear{margin-top:10px;padding:7px 14px;background:#fee2e2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;width:100%;}
+    .sp-filter-clear:hover{background:#fecaca;}
+    .qs-search-card{background:#fff;border:1px solid rgba(20,30,40,0.12);border-radius:10px;padding:14px 16px 10px;margin-bottom:14px;box-shadow:0 2px 12px rgba(20,30,40,0.08);}
+    .sp-search-box{display:flex;align-items:center;background:#f9fafb;border:1.5px solid #e2e8f0;border-radius:10px;padding:0 14px;gap:8px;transition:all 0.2s;}
+    .sp-search-box:focus-within{border-color:#0d7de0;box-shadow:0 0 0 3px rgba(13,125,224,0.10);background:#fff;}
+    .sp-search-box>span{color:#94a3b8;font-size:15px;flex-shrink:0;}
+    .sp-search-input{flex:1;border:none;outline:none;background:transparent;padding:11px 0;font-size:13.5px;color:#1e293b;font-family:inherit;}
+    .sp-search-input::placeholder{color:#94a3b8;}
+    .sp-search-clear{background:none;border:none;color:#94a3b8;cursor:pointer;font-size:13px;padding:3px 5px;border-radius:4px;display:none;}
+    .sp-search-clear:hover{color:#475569;background:#f1f5f9;}
+    .sp-results-info{margin-top:8px;font-size:11.5px;color:#94a3b8;min-height:16px;}
+    .sp-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;color:#94a3b8;text-align:center;gap:12px;background:#fff;border-radius:10px;border:1px solid rgba(20,30,40,0.10);}
+    .sp-empty-icon{width:64px;height:64px;background:#f8fafc;border:2px dashed #e2e8f0;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px;}
+    .sp-empty h4{margin:0;font-size:15px;color:#64748b;font-weight:600;}
+    .sp-empty p{margin:0;font-size:13px;}
+    .sp-card{background:#fff;border:1.5px solid #e8edf5;border-radius:12px;padding:16px 18px;margin-bottom:10px;cursor:default;transition:all 0.22s;position:relative;overflow:hidden;}
+    .sp-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,#0d7de0,#0a5fb8);border-radius:3px 0 0 3px;transform:scaleY(0);transition:transform 0.22s;}
+    .sp-card:hover{border-color:#c7d8f0;box-shadow:0 4px 20px rgba(13,125,224,0.10);}
+    .sp-card:hover::before{transform:scaleY(1);}
+    .sp-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+    .sp-card-num{font-size:15px;font-weight:700;color:#0d7de0;}
+    .sp-card-badge{background:#f0f7ff;color:#0d7de0;border:1px solid #bfdbfe;border-radius:20px;font-size:12px;font-weight:600;padding:3px 12px;white-space:nowrap;}
+    .sp-card-parties{display:flex;gap:24px;margin-top:10px;flex-wrap:wrap;}
+    .sp-card-party{display:flex;flex-direction:column;gap:2px;}
+    .sp-card-party-label{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;}
+    .sp-card-party-name{font-size:13px;font-weight:600;color:#1e293b;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .sp-card-footer{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:1px solid #f1f5f9;flex-wrap:wrap;gap:8px;}
+    .sp-card-date{font-size:12px;color:#94a3b8;}
+    .sp-card-btns{display:flex;gap:6px;flex-wrap:wrap;}
+    .sp-card-btn{padding:6px 12px;font-size:12px;border-radius:7px;border:1px solid #e2e8f0;background:#fff;color:#475569;cursor:pointer;font-family:inherit;font-weight:500;transition:all 0.15s;}
+    .sp-card-btn:hover{border-color:#0d7de0;color:#0d7de0;background:#f0f7ff;}
+    .sp-card-btn.danger{color:#dc2626;}
+    .sp-card-btn.danger:hover{border-color:#fca5a5;background:#fef2f2;}
+    .search-highlight{background:#fef08a;border-radius:2px;padding:0 1px;}
+    @media(max-width:800px){.quotes-layout{grid-template-columns:1fr;}}
+  </style>
 </head>
 <body>
   <div id="auth-guard"></div>
@@ -152,7 +196,7 @@
       <div class="sidebar-nav">
         <div class="sidebar-section-label">Menu</div>
         
-        <a href="index.html" class="sidebar-btn active" id="navHome">
+        <a href="index.html" class="sidebar-btn" id="navHome">
           <span class="nav-icon">🏠</span>
           <span>Início</span>
         </a>
@@ -160,7 +204,7 @@
           <span class="nav-icon">📋</span>
           <span>Cadastro</span>
         </a>
-        <a href="orcamentos_salvos.html" class="sidebar-btn" id="navOrcamentos">
+        <a href="orcamentos_salvos.html" class="sidebar-btn active" id="navOrcamentos">
           <span class="nav-icon">💼</span>
           <span>Orçamentos Salvos</span>
         </a>
@@ -179,84 +223,53 @@
   <div class="main-content">
     <div class="screen">
 
-      <div class="card">
-        <h4>💼 Novo Orçamento</h4>
-        <div class="form-grid" style="margin-bottom:20px;">
-          <div>
-            <label for="selectIssuer" style="display:block;margin-bottom:6px;font-weight:600;font-size:14px;color:#4b5563;">Emissor *</label>
-            <select id="selectIssuer" required><option value="">-- selecione o emissor --</option></select>
-          </div>
-          <div>
-            <label for="selectClient" style="display:block;margin-bottom:6px;font-weight:600;font-size:14px;color:#4b5563;">Cliente *</label>
-            <select id="selectClient" required><option value="">-- selecione o cliente --</option></select>
-          </div>
-        </div>
-        <div class="form-grid" style="margin-bottom:20px;padding:16px;background:#f9fafb;border-radius:8px;">
-          <div>
-            <label for="quoteNumber" style="display:block;margin-bottom:6px;font-weight:600;font-size:14px;color:#4b5563;">Número do Orçamento</label>
-            <input id="quoteNumber" placeholder="Gerado automaticamente" readonly />
-          </div>
-          <div>
-            <label for="quoteDate" style="display:block;margin-bottom:6px;font-weight:600;font-size:14px;color:#4b5563;">Data</label>
-            <input id="quoteDate" type="date" />
-          </div>
-        </div>
-        <div class="items-wrap">
-          <h4 style="margin-bottom:12px;">📋 Itens do Orçamento</h4>
-          <style>
-            .items-table{width:100%;border-collapse:collapse;margin-bottom:16px;}
-            .items-table thead th{font-weight:600;text-align:left;padding:12px 10px;color:#6b7278;border-bottom:2px solid #f3f4f6;font-size:13px;text-transform:uppercase;letter-spacing:0.3px;}
-            .items-table td{padding:12px 10px;border-bottom:1px solid #f3f4f6;vertical-align:middle;}
-            .items-table td:nth-child(4){text-align:right;font-weight:600;}
-            .items-table .del-item{background:#fee;color:#dc2626;border:1px solid #fecaca;padding:6px 10px;border-radius:5px;cursor:pointer;font-weight:600;}
-            .row-between{display:flex;align-items:center;justify-content:space-between;margin-top:16px;gap:16px;flex-wrap:wrap;}
-            .total{font-size:18px;font-weight:600;color:#0d7de0;}
-            .generate-wrap{margin:24px 0 32px;}
-            .btn-generate{width:100%;padding:16px 24px;border-radius:10px;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 8px 24px rgba(13,125,224,0.3);}
-            .btn-generate:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(13,125,224,0.4);}
-            @media(max-width:600px){
-              .items-table thead{display:none;}
-              .items-table tbody tr{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 0;border-bottom:1px solid #f3f4f6;}
-              .items-table td{padding:0;border:none;display:block;}
-              .items-table td:nth-child(1){grid-column:1/-1;}
-              .items-table td:nth-child(4){text-align:left!important;}
-              .items-table td:nth-child(5){grid-column:2;display:flex;align-items:flex-end;justify-content:flex-end;}
-            }
-          </style>
-          <div style="overflow-x:auto;">
-            <table class="items-table" id="itemsTable">
-              <thead><tr>
-                <th style="width:50%">Descrição</th>
-                <th style="width:12%">Qtd</th>
-                <th style="width:16%">Unit. (R$)</th>
-                <th style="width:16%">Total (R$)</th>
-                <th style="width:6%"></th>
-              </tr></thead>
-              <tbody id="itemsBody"></tbody>
-            </table>
-          </div>
-          <div class="row-between" style="margin-top:16px;">
-            <button id="addItemBtn" class="btn" style="border-color:#d1e7ff;color:#0d7de0;background:#f0f7ff;">+ Adicionar Item</button>
-            <div class="total">Total: R$ <strong><span id="grandTotal">0.00</span></strong></div>
-          </div>
-        </div>
-        <div style="margin-top:20px;">
-          <label for="notes" style="display:block;margin-bottom:8px;font-weight:600;font-size:14px;color:#4b5563;">📌 Observações (opcional)</label>
-          <textarea id="notes" rows="4" placeholder="Adicione observações, condições de pagamento, prazo de validade, etc."></textarea>
-        </div>
+      <div class="screen-hero">
+        <h2>💼 Orçamentos Salvos</h2>
+        <p>Gerencie todos os seus orçamentos</p>
       </div>
 
-      <div class="generate-wrap">
-        <button id="saveQuoteBtn" class="btn btn-primary btn-generate">📄 Gerar Orçamento</button>
-        <button id="cancelEditBtn" class="btn btn-outline" style="width:100%;margin-top:12px;">Cancelar Edição</button>
+      <div class="quotes-layout">
+        <!-- Filtros -->
+        <div>
+          <div class="qs-filters-card">
+            <div class="qs-filter-title">🏢 Filtrar por Emissor</div>
+            <div class="sp-filter-chips" id="spIssuerChips"></div>
+          </div>
+          <div class="qs-filters-card">
+            <div class="qs-filter-title">👤 Filtrar por Cliente</div>
+            <div class="sp-filter-chips" id="spClientChips"></div>
+          </div>
+          <button class="sp-filter-clear" id="spFilterClear" style="display:none;">✕ Limpar filtros</button>
+        </div>
+        <!-- Lista -->
+        <div>
+          <div class="qs-search-card">
+            <div class="sp-search-box">
+              <span>🔍</span>
+              <input type="text" class="sp-search-input" id="spSearch" placeholder="Pesquisar por número, cliente, emissor, valor..." autocomplete="off" />
+              <button class="sp-search-clear" id="spClear">✕</button>
+            </div>
+            <div class="sp-results-info" id="spResultsInfo"></div>
+          </div>
+          <div id="spList">
+            <div class="sp-empty">
+              <div class="sp-empty-icon">📭</div>
+              <h4>Nenhum orçamento ainda</h4>
+              <p>Crie seu primeiro orçamento na tela <a href="index.html" style="color:#0d7de0;">Início</a></p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- elementos ocultos exigidos pelo app.js -->
       <div style="display:none;">
-        <ul id="quotesList"></ul>
-        <input id="quotesSearch" /><button id="clearSearch"></button>
+        <select id="selectIssuer"></select><select id="selectClient"></select>
+        <input id="quoteNumber"/><input id="quoteDate" type="date"/><textarea id="notes"></textarea>
+        <table><tbody id="itemsBody"></tbody></table><button id="addItemBtn"></button>
+        <span id="subtotal"></span><span id="grandTotal"></span>
+        <button id="saveQuoteBtn"></button><button id="cancelEditBtn"></button>
+        <ul id="quotesList"></ul><input id="quotesSearch"/><button id="clearSearch"></button>
         <div id="filterResultsCount"></div>
-        <span id="subtotal"></span>
         <ul id="issuerList"></ul><ul id="clientList"></ul>
         <form id="issuerForm"><input id="issuerName"/><input id="issuerCnpjCpf"/><textarea id="issuerAddress"></textarea><input id="issuerPhone"/><input id="issuerLogo" type="file"/><div id="issuerLogoPreview"><img id="issuerLogoImg"/></div><button id="removeLogoBtn"></button><button id="issuerSubmitBtn"></button><button id="issuerCancelBtn"></button></form>
         <form id="clientForm"><input id="clientName"/><input id="clientCnpjCpf"/><textarea id="clientAddress"></textarea><input id="clientPhone"/><button id="clientSubmitBtn"></button><button id="clientCancelBtn"></button></form>
@@ -345,9 +358,141 @@
   <script src="auth.js"></script>
   <script src="app.js"></script>
   <script>
+    // ── Painel de orçamentos ──────────────────────────────────────────────────
+    const spSearch      = document.getElementById('spSearch');
+    const spClear       = document.getElementById('spClear');
+    const spList        = document.getElementById('spList');
+    const spInfo        = document.getElementById('spResultsInfo');
+    const spIssuerChips = document.getElementById('spIssuerChips');
+    const spClientChips = document.getElementById('spClientChips');
+    const spFilterClear = document.getElementById('spFilterClear');
+
+    let spQuery='', spIssuerFilter='', spClientFilter='';
+
+    function normalizeStr2(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+    function highlight2(text, q){
+      if (!q) return String(text||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const nt=normalizeStr2(text), nq=normalizeStr2(q);
+      const idx=nt.indexOf(nq);
+      if(idx===-1) return String(text||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const safe=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      return safe(text.slice(0,idx))+'<mark class="search-highlight">'+safe(text.slice(idx,idx+nq.length))+'</mark>'+safe(text.slice(idx+nq.length));
+    }
+
+    function renderPanel(){
+      if(typeof store==='undefined') return;
+      const quotes=[...(store.quotes||[])].reverse();
+      const issuers=store.issuers||[], clients=store.clients||[];
+
+      // Chips emissores
+      spIssuerChips.innerHTML='';
+      const usedIssuers=[...new Set(quotes.map(q=>q.issuerId))].map(id=>issuers.find(i=>i.id===id)).filter(Boolean);
+      usedIssuers.forEach(iss=>{
+        const cnt=quotes.filter(q=>q.issuerId===iss.id).length;
+        const btn=document.createElement('button');
+        btn.className='sp-chip'+(spIssuerFilter===iss.id?' active':'');
+        btn.textContent=iss.name+' ('+cnt+')';
+        btn.onclick=()=>{ spIssuerFilter=spIssuerFilter===iss.id?'':iss.id; renderPanel(); };
+        spIssuerChips.appendChild(btn);
+      });
+
+      // Chips clientes
+      spClientChips.innerHTML='';
+      const usedClients=[...new Set(quotes.map(q=>q.clientId))].map(id=>clients.find(c=>c.id===id)).filter(Boolean);
+      usedClients.forEach(cli=>{
+        const cnt=quotes.filter(q=>q.clientId===cli.id).length;
+        const btn=document.createElement('button');
+        btn.className='sp-chip'+(spClientFilter===cli.id?' active':'');
+        btn.textContent=cli.name+' ('+cnt+')';
+        btn.onclick=()=>{ spClientFilter=spClientFilter===cli.id?'':cli.id; renderPanel(); };
+        spClientChips.appendChild(btn);
+      });
+
+      spFilterClear.style.display=(spIssuerFilter||spClientFilter)?'block':'none';
+
+      // Filtro
+      let filtered=quotes;
+      if(spIssuerFilter) filtered=filtered.filter(q=>q.issuerId===spIssuerFilter);
+      if(spClientFilter) filtered=filtered.filter(q=>q.clientId===spClientFilter);
+      if(spQuery){
+        const nq=normalizeStr2(spQuery);
+        filtered=filtered.filter(q=>{
+          const iss=issuers.find(i=>i.id===q.issuerId)||{};
+          const cli=clients.find(c=>c.id===q.clientId)||{};
+          return [q.numero||'',iss.name||'',cli.name||'',new Date(q.createdAt).toLocaleDateString('pt-BR'),Number(q.total||0).toFixed(2)].some(f=>normalizeStr2(f).includes(nq));
+        });
+      }
+
+      if(filtered.length>0) spInfo.textContent=spQuery?`Exibindo ${filtered.length} de ${quotes.length} orçamento${quotes.length!==1?'s':''}`:quotes.length+' orçamento'+(quotes.length!==1?'s':'');
+      else spInfo.textContent='';
+
+      if(!filtered.length){
+        spList.innerHTML=quotes.length?'<div class="sp-empty"><div class="sp-empty-icon">🔍</div><h4>Nenhum resultado</h4><p>Tente outros termos</p></div>':'<div class="sp-empty"><div class="sp-empty-icon">📭</div><h4>Nenhum orçamento ainda</h4><p>Crie seu primeiro orçamento na tela <a href=\"index.html\" style=\"color:#0d7de0;\">Início</a></p></div>';
+        return;
+      }
+
+      spList.innerHTML='';
+      filtered.forEach(q=>{
+        const iss=issuers.find(i=>i.id===q.issuerId)||{};
+        const cli=clients.find(c=>c.id===q.clientId)||{};
+        const dateStr=q.createdAt?new Date(q.createdAt).toLocaleDateString('pt-BR'):'';
+        const totalFmt='R$ '+Number(q.total||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
+        const card=document.createElement('div'); card.className='sp-card';
+        card.innerHTML=`
+          <div class="sp-card-top">
+            <span class="sp-card-num">📄 ${highlight2(q.numero||q.id,spQuery)}</span>
+            <span class="sp-card-badge">${totalFmt}</span>
+          </div>
+          <div class="sp-card-parties">
+            <div class="sp-card-party"><div class="sp-card-party-label">De</div><div class="sp-card-party-name">${highlight2(iss.name||'—',spQuery)}</div></div>
+            <div class="sp-card-party"><div class="sp-card-party-label">Para</div><div class="sp-card-party-name">${highlight2(cli.name||'—',spQuery)}</div></div>
+          </div>
+          <div class="sp-card-footer">
+            <span class="sp-card-date">📅 ${dateStr}</span>
+            <div class="sp-card-btns">
+              <button class="sp-card-btn" onclick="openPreview('${q.id}')">👁️ Ver</button>
+              <button class="sp-card-btn" onclick="generatePDFFromQuote('${q.id}')">📥 PDF</button>
+              <button class="sp-card-btn" onclick="exportQuoteDoc('${q.id}')">📄 Word</button>
+              <button class="sp-card-btn" onclick="startEditMode_redirect('${q.id}')">✏️ Editar</button>
+              <button class="sp-card-btn danger" onclick="deleteQuote('${q.id}')">🗑️</button>
+            </div>
+          </div>`;
+        spList.appendChild(card);
+      });
+    }
+
+    function startEditMode_redirect(id) {
+      // Guarda o id na sessionStorage e redireciona para Início
+      sessionStorage.setItem('editQuoteId', id);
+      window.location.href = 'index.html';
+    }
+
+    async function deleteQuote(id){
+      if (!confirm('❓ Excluir este orçamento permanentemente?')) return;
+      if (typeof dbDeleteQuote==='function'){
+        await dbDeleteQuote(id);
+        if(typeof store!=='undefined') store.quotes=store.quotes.filter(q=>q.id!==id);
+        renderPanel();
+        if(typeof showNotification==='function') showNotification('Orçamento excluído','success');
+      }
+    }
+
+    // Busca
+    spSearch && spSearch.addEventListener('input', ()=>{
+      spQuery=spSearch.value;
+      spClear.style.display=spQuery?'block':'none';
+      renderPanel();
+    });
+    spClear && spClear.addEventListener('click', ()=>{ spQuery=''; spSearch.value=''; spClear.style.display='none'; renderPanel(); });
+    spFilterClear && spFilterClear.addEventListener('click', ()=>{ spIssuerFilter=''; spClientFilter=''; spFilterClear.style.display='none'; renderPanel(); });
+
+    // Download PDF no modal
     document.getElementById('downloadPdfBtn') && document.getElementById('downloadPdfBtn').addEventListener('click', () => {
       if (typeof currentPreviewQuoteId !== 'undefined' && currentPreviewQuoteId) generatePDFFromQuote(currentPreviewQuoteId);
     });
+
+    // Renderiza assim que os dados chegarem
+    const _panelInterval = setInterval(()=>{ if(typeof store!=='undefined'&&typeof renderPanel==='function'){ renderPanel(); clearInterval(_panelInterval); } },400);
   </script>
 
   <script>
