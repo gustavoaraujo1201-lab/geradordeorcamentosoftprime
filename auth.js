@@ -85,6 +85,23 @@ class AuthManager {
       this.supabase.auth.onAuthStateChange((event, session) => {
         console.log('🔔 Auth event:', event);
 
+        // INITIAL_SESSION: sessão já existia (ex: voltou de outra aba/dispositivo)
+        // Só age se ainda não inicializamos a UI (evita dupla chamada com o getSession acima)
+        if (event === 'INITIAL_SESSION' && session && this._isAppPage() && !this._redirecting) {
+          if (!this.currentUser) {
+            this.currentUser = session.user;
+            this._updateAppUI();
+          }
+        }
+
+        if (event === 'SIGNED_IN' && session && !this._redirecting) {
+          this.currentUser = session.user;
+          if (this._isLoginPage()) {
+            this._redirecting = true;
+            window.location.replace('/index.html');
+          }
+        }
+
         if (event === 'SIGNED_OUT') {
           this.currentUser = null;
           if (!this._redirecting) {
@@ -113,7 +130,10 @@ class AuthManager {
 
   _isAppPage() {
     const p = window.location.pathname;
-    return p.endsWith('index.html') || p === '/index' || p === '/index/';
+    // Reconhece index.html, /, /index e caminhos sem extensão que não sejam login
+    return p.endsWith('index.html') || p === '/index' || p === '/index/'
+        || (p === '/' && !this._isLoginPage())
+        || p === '';
   }
 
   // ── Remove a tela de bloqueio ──────────────────────────────────

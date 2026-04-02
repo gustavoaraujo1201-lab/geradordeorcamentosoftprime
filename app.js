@@ -16,7 +16,14 @@ const STORE_KEY = "softprime_quotes_v2";
 const MIGRATION_KEY = "softprime_migrated_v1";
 
 // ========== UTILITIES ==========
-function uid(){ return Math.random().toString(36).slice(2,9); }
+function uid(){
+  // UUID v4 real — exigido pelo Supabase para chaves primárias e foreign keys
+  if (crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random()*16|0;
+    return (c==='x' ? r : (r&0x3|0x8)).toString(16);
+  });
+}
 const money = v => Number(v||0).toFixed(2);
 
 function escapeHtml(str){
@@ -57,8 +64,29 @@ function formatQuoteNumber(n){
 
 // ========== NOTIFICATION ==========
 function showNotification(message, type='success'){
-  const icon = type==='success' ? '✅' : type==='error' ? '❌' : 'ℹ️';
-  alert(`${icon} ${message}`);
+  // Toast não-bloqueante — funciona em mobile e não interrompe o fluxo
+  const prev = document.getElementById('sp-toast');
+  if (prev) prev.remove();
+  const colors = { success:'#16a34a', error:'#dc2626', info:'#0d7de0' };
+  const icons  = { success:'✅', error:'❌', info:'ℹ️' };
+  const toast = document.createElement('div');
+  toast.id = 'sp-toast';
+  toast.style.cssText = [
+    'position:fixed','bottom:24px','right:20px','z-index:99999',
+    'max-width:340px','min-width:200px',`background:${colors[type]||colors.info}`,
+    'color:#fff','font-family:Arial,sans-serif','font-size:14px','font-weight:500',
+    'padding:14px 18px','border-radius:10px','box-shadow:0 4px 20px rgba(0,0,0,.25)',
+    'display:flex','align-items:flex-start','gap:10px','word-break:break-word',
+    'animation:spIn .25s ease'
+  ].join(';');
+  if (!document.getElementById('sp-toast-css')){
+    const s=document.createElement('style'); s.id='sp-toast-css';
+    s.textContent='@keyframes spIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}';
+    document.head.appendChild(s);
+  }
+  toast.innerHTML=`<span style="font-size:18px;line-height:1">${icons[type]||'ℹ️'}</span><span>${message}</span>`;
+  document.body.appendChild(toast);
+  setTimeout(()=>{ if(toast.parentNode) toast.remove(); }, type==='error'?6000:3500);
 }
 
 // ========== LOADING STATE ==========
@@ -76,14 +104,14 @@ async function dbLoadIssuers(){
   const { data, error } = await sb.from('issuers').select('*').eq('user_id', uid).order('created_at');
   if (error){ console.error('dbLoadIssuers:', error); return []; }
   return (data||[]).map(r => ({
-    id: r.id, name: r.name, cnpjCpf: r.cnpj||'', address: r.address||'', phone: r.phone||'',
+    id: r.id, name: r.name, cnpjCpf: r.cnpj_cpf||r.cnpj||'', address: r.address||'', phone: r.phone||'',
     logo: r.logo||null, createdAt: r.created_at
   }));
 }
 async function dbSaveIssuer(issuer){
   const sb = getSupabase(); const userId = getUserId();
   if (!sb || !userId) return null;
-  const row = { id: issuer.id, user_id: userId, name: issuer.name, cnpj: issuer.cnpjCpf||'',
+  const row = { id: issuer.id, user_id: userId, name: issuer.name, cnpj_cpf: issuer.cnpjCpf||'',
     address: issuer.address||'', phone: issuer.phone||'', logo: issuer.logo||null };
   const { data, error } = await sb.from('issuers').upsert(row, { onConflict: 'id' }).select().single();
   if (error){ console.error('dbSaveIssuer:', error); return null; }
@@ -261,6 +289,7 @@ const closePreview     = document.getElementById("closePreview");
 const printBtn         = document.getElementById("printBtn");
 
 let currentItems = [{descricao:"",quantidade:1,valorUnitario:0}];
+let _appInitialized = false; // guard contra dupla inicialização
 let editingQuoteId   = null;
 let editingIssuerId  = null;
 let editingClientId  = null;
@@ -496,9 +525,10 @@ if (issuerForm){
 
       const newItem = { id: uid(), name, cnpjCpf, address, phone, logo: currentIssuerLogoDataUrl||null };
       setLoading(true);
-      await dbSaveIssuer(newItem);
+      const savedIssuer = await dbSaveIssuer(newItem);
+      // Recarrega do banco para garantir dados corretos (inclusive IDs gerados pelo servidor)
+      store.issuers = await dbLoadIssuers();
       setLoading(false);
-      store.issuers.push(newItem);
       issuerForm.reset(); currentIssuerLogoDataUrl = null;
       if (issuerLogoInput) issuerLogoInput.value='';
       if (issuerLogoPreview) issuerLogoPreview.style.display='none';
@@ -606,8 +636,8 @@ if (clientForm){
       const newItem = { id: uid(), name, cnpjCpf, address, phone };
       setLoading(true);
       await dbSaveClient(newItem);
+      store.clients = await dbLoadClients();
       setLoading(false);
-      store.clients.push(newItem);
       clientForm.reset(); renderClients(); renderQuotes();
       showNotification("Cliente adicionado com sucesso!","success");
     } catch(err){ console.error("[ERROR] clientForm:",err); setLoading(false); showNotification("Erro ao salvar cliente","error"); }
@@ -715,8 +745,8 @@ if (saveQuoteBtn){
       };
       setLoading(true);
       await dbSaveQuote(q);
+      store.quotes = await dbLoadQuotes();
       setLoading(false);
-      store.quotes.push(q);
       currentItems=[{descricao:"",quantidade:1,valorUnitario:0}];
       renderItems(currentItems); renderQuotes(); setDefaultQuoteFields();
       showNotification(`✅ Orçamento ${q.numero} salvo com sucesso!`,"success");
@@ -1181,6 +1211,8 @@ function renderAll(){ renderIssuers(); renderClients(); renderQuotes(); renderIt
 // ========== INIT ==========
 // Chamado pelo authManager após confirmar sessão (não depende de polling)
 async function initApp() {
+  if (_appInitialized) { console.log("⚠️ initApp já foi chamado — ignorando dupla chamada"); return; }
+  _appInitialized = true;
   await loadAllData();
   renderAll();
   setDefaultQuoteFields();
