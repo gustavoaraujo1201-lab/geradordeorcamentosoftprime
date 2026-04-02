@@ -583,12 +583,14 @@ Segue o orçamento ${num}.
 ${iss.name||''}`
         );
 
+        const wppUrl = 'https://wa.me/?text=' + msgWpp;
+        const mailUrl = 'mailto:?subject=' + assunto + '&body=' + corpoEmail;
         menu.innerHTML =
-          '<button class="share-item" onclick="window.open('https://wa.me/?text=' + msgWpp + '','_blank')">' +
+          '<button class="share-item" onclick="window.open(\'' + wppUrl + '\',\'_blank\')">' +
             '<span class="share-icon">📱</span> WhatsApp' +
           '</button>' +
           '<div class="share-divider"></div>' +
-          '<button class="share-item" onclick="window.location.href='mailto:?subject=' + assunto + '&body=' + corpoEmail + ''">' +
+          '<button class="share-item" onclick="window.location.href=\'' + mailUrl + '\'">' +
             '<span class="share-icon">📧</span> Email' +
           '</button>';
 
