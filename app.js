@@ -3,11 +3,9 @@
 // Migração automática do localStorage na primeira vez
 
 // ========== SUPABASE HELPER ==========
+// SEMPRE usa o cliente do authManager — ele já tem a sessão autenticada
 function getSupabase() {
-  if (window.authManager && window.authManager.getSupabase()) return window.authManager.getSupabase();
-  if (window.supabase && window.SUPABASE_URL && window.SUPABASE_ANON_KEY)
-    return window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
-  return null;
+  return window.authManager ? window.authManager.getSupabase() : null;
 }
 function getUserId() {
   return window.authManager ? window.authManager.getUserId() : null;
@@ -1180,25 +1178,19 @@ function renderQuoteHtml(q, issuer, client){
 // ========== INIT ==========
 function renderAll(){ renderIssuers(); renderClients(); renderQuotes(); renderItems(currentItems); }
 
-document.addEventListener('DOMContentLoaded', async ()=>{
-  // Aguarda authManager inicializar E ter o usuário logado
-  let tries = 0;
-  while (tries < 60){
-    if (window.authManager && window.authManager._initialized && window.authManager.getUserId()) break;
-    await new Promise(r=>setTimeout(r,150));
-    tries++;
-  }
-
-  const userId = window.authManager ? window.authManager.getUserId() : null;
-  if (!userId){
-    console.warn("Usuário não autenticado — dados não carregados");
-    renderAll();
-    setDefaultQuoteFields();
-    return;
-  }
-
+// ========== INIT ==========
+// Chamado pelo authManager após confirmar sessão (não depende de polling)
+async function initApp() {
   await loadAllData();
   renderAll();
   setDefaultQuoteFields();
-  console.log("✅ SoftPrime iniciado! Usuário:", userId);
+  console.log("✅ SoftPrime iniciado! Usuário:", getUserId());
+}
+
+// Fallback: se authManager já inicializou antes deste script carregar
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.authManager && window.authManager._initialized && window.authManager.getUserId()) {
+    initApp();
+  }
+  // Caso contrário, o authManager vai chamar initApp() diretamente via _updateAppUI
 });

@@ -152,7 +152,10 @@ class AuthManager {
         });
     }
 
-    // NÃO chamar renderAll() aqui — o app.js chama após loadAllData()
+    // Chama initApp do app.js agora que temos sessão confirmada
+    if (typeof initApp === 'function') {
+      initApp();
+    }
   }
 
   // Aliases para compatibilidade com código legado
