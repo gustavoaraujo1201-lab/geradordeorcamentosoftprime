@@ -856,6 +856,11 @@ if (printBtn){
 // ========== CSV EXPORT ==========
 if (exportCsvBtn){
   exportCsvBtn.addEventListener("click",()=>{
+    // ── PAYWALL: Exportação CSV requer pelo menos plano Básico ──
+    if (window.PaywallModal && !window.PaywallModal.hasAccess('export')) {
+      window.PaywallModal.open('export');
+      return;
+    }
     if (!store.quotes.length){ showNotification("Nenhum orçamento para exportar","info"); return; }
     const rows=[["Número","Emissor","CNPJ Emissor","Cliente","CNPJ Cliente","Data","Subtotal","Total","Observações"].map(h=>`"${h}"`).join(",")];
     store.quotes.forEach(q=>{
@@ -876,6 +881,11 @@ if (exportCsvBtn){
 // ========== WORD EXPORT (preview) ==========
 if (exportDocBtn){
   exportDocBtn.addEventListener("click",()=>{
+    // ── PAYWALL: Word export requer plano Premium ──
+    if (window.PaywallModal && !window.PaywallModal.hasAccess('word')) {
+      window.PaywallModal.open('word');
+      return;
+    }
     if (!lastPreviewHtml){ showNotification("Abra um orçamento primeiro (Visualizar/Imprimir) para exportar","info"); return; }
     const html=`<!doctype html><html><head><meta charset="utf-8"><title>Orçamento - SoftPrime</title></head><body>${lastPreviewHtml}</body></html>`;
     const blob=new Blob([html],{type:"application/msword"});
@@ -888,6 +898,11 @@ if (exportDocBtn){
 
 // ========== WORD EXPORT (individual) ==========
 function exportQuoteDoc(quoteId){
+  // ── PAYWALL: Word export requer plano Premium ──
+  if (window.PaywallModal && !window.PaywallModal.hasAccess('word')) {
+    window.PaywallModal.open('word');
+    return;
+  }
   try {
     const q=store.quotes.find(x=>x.id===quoteId);
     if (!q){ showNotification("Orçamento não encontrado","error"); return; }
@@ -1028,6 +1043,11 @@ function generatePDFFromQuote(quoteId){
     const q=store.quotes.find(x=>x.id===quoteId);
     if (!q){ showNotification("Orçamento não encontrado","error"); return; }
     const issuer=store.issuers.find(i=>i.id===q.issuerId)||{};
+    // ── PAYWALL: PDF com logo requer plano Intermediário ──
+    if (issuer.logo && window.PaywallModal && !window.PaywallModal.hasAccess('pdf')) {
+      window.PaywallModal.open('pdf');
+      return;
+    }
     const client=store.clients.find(c=>c.id===q.clientId)||{};
     const dateOnly=formatDateISOtoLocal(q.createdAt);
     const mf=v=>parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');

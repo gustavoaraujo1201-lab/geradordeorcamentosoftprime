@@ -66,7 +66,7 @@
     font-family: 'Syne', sans-serif;
     font-weight: 800; font-size: 20px;
     background: linear-gradient(90deg, var(--accent), var(--accent-2));
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
     letter-spacing: -0.5px;
   }
   .header-nav { display: flex; gap: 12px; align-items: center; }
@@ -116,7 +116,7 @@
   .hero h1 em {
     font-style: normal;
     background: linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
   }
   .hero p {
     font-size: 18px; color: var(--muted); max-width: 520px; margin: 0 auto 36px;
@@ -309,7 +309,7 @@
   .step-num {
     font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800;
     background: linear-gradient(90deg, var(--accent), var(--accent-2));
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
     margin-bottom: 8px;
   }
   .trial-step h4 { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
@@ -514,11 +514,11 @@
   </section>
 
   <footer>
-    <p>© 2025 SoftPrime — <a href="login.html">Entrar no sistema</a> · Dúvidas? <a href="mailto:suporte@softprime.com.br">suporte@softprime.com.br</a></p>
+    <p>© 2025 SoftPrime — <a href="login.html">Entrar no sistema</a> · Dúvidas? <a href="/cdn-cgi/l/email-protection#afdcdadfc0dddbcaefdcc0c9dbdfddc6c2ca81ccc0c281cddd"><span class="__cf_email__" data-cfemail="d0a3a5a0bfa2a4b590a3bfb6a4a0a2b9bdb5feb3bfbdfeb2a2">[email&#160;protected]</span></a></p>
   </footer>
 </div>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ── Stars canvas ──
 (function() {
   const c = document.getElementById('stars');
@@ -581,15 +581,15 @@ function toggleBilling() {
 // Crie os planos em: https://www.mercadopago.com.br/subscription-plans/list
 const MP_LINKS = {
   basic: {
-    monthly: 'https://mpago.la/SEU_LINK_BASICO_MENSAL',
+    monthly: 'https://www.mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=27ebb103fe7f4b79896c1bab3fbba34e',
     annual:  'https://mpago.la/SEU_LINK_BASICO_ANUAL'
   },
   pro: {
-    monthly: 'https://mpago.la/SEU_LINK_PRO_MENSAL',
+    monthly: 'https://www.mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=d2e9a9c34db74ea9a5ab9cadcf811171',
     annual:  'https://mpago.la/SEU_LINK_PRO_ANUAL'
   },
   premium: {
-    monthly: 'https://mpago.la/SEU_LINK_PREMIUM_MENSAL',
+    monthly: 'https://www.mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=47df5b41e79a4ce8aef081c3babd9d3f',
     annual:  'https://mpago.la/SEU_LINK_PREMIUM_ANUAL'
   }
 };
@@ -601,15 +601,4 @@ function startCheckout(plan) {
   // Exibe loading
   document.getElementById('mp-loading').classList.add('show');
 
-  // Salva plano escolhido no localStorage para uso após retorno
-  localStorage.setItem('pendingPlan', plan);
-  localStorage.setItem('pendingPeriod', period);
-
-  // Pequeno delay visual antes de redirecionar
-  setTimeout(() => {
-    window.location.href = url;
-  }, 900);
 }
-</script>
-</body>
-</html>

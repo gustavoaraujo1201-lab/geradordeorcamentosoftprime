@@ -537,5 +537,154 @@
       const pf=document.getElementById('profileModal'); if(pf&&!pf.classList.contains('hidden')) pf.classList.add('hidden');
     });
   </script>
+
+  <!-- ═══════════════════════════════════════════════════
+       PAYWALL MODAL — SoftPrime
+       Uso: window.PaywallModal.open('pdf')
+            window.PaywallModal.open('word')
+            window.PaywallModal.hasAccess('pdf') → true/false
+  ═══════════════════════════════════════════════════ -->
+  <div id="paywall-modal" style="display:none;position:fixed;inset:0;z-index:99990;background:rgba(2,8,20,0.82);backdrop-filter:blur(10px);align-items:center;justify-content:center;padding:20px;" role="dialog" aria-modal="true">
+    <div style="background:linear-gradient(160deg,#041830 0%,#020c1b 100%);border:1px solid rgba(26,143,255,0.22);border-radius:20px;padding:36px 32px 28px;width:100%;max-width:700px;position:relative;box-shadow:0 30px 80px rgba(0,0,0,0.6);animation:pwBoxIn 0.3s cubic-bezier(.34,1.56,.64,1) both;">
+      <button onclick="window.PaywallModal.close()" style="position:absolute;top:14px;right:16px;background:rgba(255,255,255,0.06);border:none;color:rgba(160,200,255,0.5);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.14)';this.style.color='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.06)';this.style.color='rgba(160,200,255,0.5)'">✕</button>
+
+      <!-- Header -->
+      <div style="text-align:center;margin-bottom:18px;">
+        <div id="pw-icon" style="font-size:38px;margin-bottom:10px;">🔒</div>
+        <h2 id="pw-title" style="font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:#f0f6ff;margin:0 0 8px;letter-spacing:-0.5px;"></h2>
+        <p id="pw-subtitle" style="color:rgba(160,200,255,0.6);font-size:14px;line-height:1.5;margin:0;max-width:460px;margin:0 auto;"></p>
+      </div>
+
+      <!-- Trial badge -->
+      <div style="text-align:center;margin-bottom:22px;">
+        <span style="display:inline-block;padding:9px 22px;border-radius:100px;background:rgba(245,200,66,0.1);border:1px solid rgba(245,200,66,0.28);color:#f5c842;font-size:13px;font-weight:500;">
+          🎁 <strong>7 dias grátis</strong> em qualquer plano — sem cartão
+        </span>
+      </div>
+
+      <!-- Plans -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px;" id="pw-plans-grid">
+
+        <!-- Básico -->
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(26,143,255,0.12);border-radius:14px;padding:20px 16px;display:flex;flex-direction:column;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:rgba(160,200,255,0.5);margin-bottom:8px;">Básico</div>
+          <div style="margin-bottom:14px;color:rgba(160,200,255,0.5);font-size:13px;">R$ <strong style="font-size:28px;font-weight:800;color:#f0f6ff;">29<small style="font-size:16px;">,90</small></strong><span style="font-size:12px;">/mês</span></div>
+          <ul style="list-style:none;padding:0;margin:0 0 16px;display:flex;flex-direction:column;gap:7px;flex:1;">
+            <li style="font-size:12px;color:rgba(200,230,255,0.65);">✓ Orçamentos ilimitados</li>
+            <li style="font-size:12px;color:rgba(200,230,255,0.65);">✓ Clientes e emissores</li>
+            <li style="font-size:12px;color:rgba(200,230,255,0.65);">✓ Impressão básica (PDF)</li>
+            <li style="font-size:12px;color:rgba(255,255,255,0.22);">✕ PDF com logo</li>
+            <li style="font-size:12px;color:rgba(255,255,255,0.22);">✕ Word / Excel</li>
+          </ul>
+          <button onclick="window.PaywallModal.checkout('basic')" style="width:100%;padding:10px;border-radius:8px;background:transparent;border:1px solid rgba(26,143,255,0.22);color:rgba(160,200,255,0.7);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.2s;" onmouseover="this.style.borderColor='#1a8fff';this.style.color='#1a8fff'" onmouseout="this.style.borderColor='rgba(26,143,255,0.22)';this.style.color='rgba(160,200,255,0.7)'">Escolher</button>
+        </div>
+
+        <!-- Intermediário (popular) -->
+        <div style="background:rgba(26,143,255,0.1);border:1px solid rgba(26,143,255,0.38);border-radius:14px;padding:20px 16px;display:flex;flex-direction:column;position:relative;box-shadow:0 0 0 1px rgba(26,143,255,0.18),0 8px 32px rgba(26,143,255,0.15);">
+          <div style="position:absolute;top:-1px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,#1a8fff,#00d4ff);color:#fff;font-size:10px;font-weight:700;letter-spacing:0.5px;padding:3px 12px;border-radius:0 0 8px 8px;white-space:nowrap;text-transform:uppercase;">⚡ Popular</div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:#00d4ff;margin-bottom:8px;margin-top:10px;">Intermediário</div>
+          <div style="margin-bottom:14px;color:rgba(160,200,255,0.5);font-size:13px;">R$ <strong style="font-size:28px;font-weight:800;color:#f0f6ff;">49<small style="font-size:16px;">,90</small></strong><span style="font-size:12px;">/mês</span></div>
+          <ul style="list-style:none;padding:0;margin:0 0 16px;display:flex;flex-direction:column;gap:7px;flex:1;">
+            <li style="font-size:12px;color:rgba(200,230,255,0.65);">✓ Tudo do Básico</li>
+            <li style="font-size:12px;color:#f0f6ff;font-weight:600;">✓ PDF com logo</li>
+            <li style="font-size:12px;color:rgba(200,230,255,0.65);">✓ Múltiplos modelos</li>
+            <li style="font-size:12px;color:rgba(255,255,255,0.22);">✕ Word / Excel</li>
+            <li style="font-size:12px;color:rgba(255,255,255,0.22);">✕ Suporte VIP</li>
+          </ul>
+          <button onclick="window.PaywallModal.checkout('pro')" style="width:100%;padding:10px;border-radius:8px;background:linear-gradient(135deg,#1a8fff,#0a6dc7);color:#fff;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.2s;box-shadow:0 4px 16px rgba(26,143,255,0.3);" onmouseover="this.style.boxShadow='0 6px 24px rgba(26,143,255,0.5)';this.style.transform='translateY(-1px)'" onmouseout="this.style.boxShadow='0 4px 16px rgba(26,143,255,0.3)';this.style.transform='translateY(0)'">Começar grátis →</button>
+        </div>
+
+        <!-- Premium -->
+        <div style="background:rgba(245,200,66,0.06);border:1px solid rgba(245,200,66,0.2);border-radius:14px;padding:20px 16px;display:flex;flex-direction:column;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:#f5c842;margin-bottom:8px;">Premium</div>
+          <div style="margin-bottom:14px;color:rgba(160,200,255,0.5);font-size:13px;">R$ <strong style="font-size:28px;font-weight:800;color:#f0f6ff;">79<small style="font-size:16px;">,90</small></strong><span style="font-size:12px;">/mês</span></div>
+          <ul style="list-style:none;padding:0;margin:0 0 16px;display:flex;flex-direction:column;gap:7px;flex:1;">
+            <li style="font-size:12px;color:#f0f6ff;font-weight:600;">✓ Tudo liberado</li>
+            <li style="font-size:12px;color:#f5c842;font-weight:600;">✓ Word + Excel</li>
+            <li style="font-size:12px;color:#f5c842;font-weight:600;">✓ Sem marca d'água</li>
+            <li style="font-size:12px;color:rgba(200,230,255,0.65);">✓ Suporte WhatsApp</li>
+            <li style="font-size:12px;color:rgba(200,230,255,0.65);">✓ Backup na nuvem</li>
+          </ul>
+          <button onclick="window.PaywallModal.checkout('premium')" style="width:100%;padding:10px;border-radius:8px;background:linear-gradient(135deg,#b8860b,#f5c842);color:#020c1b;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">Escolher</button>
+        </div>
+
+      </div>
+
+      <p style="text-align:center;font-size:12px;color:rgba(160,200,255,0.3);margin:0;">
+        <a href="planos.html" target="_blank" style="color:#1a8fff;text-decoration:none;">Ver comparativo completo →</a>
+        &nbsp;·&nbsp; Cancele quando quiser
+      </p>
+    </div>
+  </div>
+
+  <style>
+    @keyframes pwBoxIn {
+      from { opacity:0; transform:translateY(20px) scale(0.96); }
+      to   { opacity:1; transform:translateY(0) scale(1); }
+    }
+    @media(max-width:600px){
+      #pw-plans-grid { grid-template-columns:1fr !important; }
+    }
+  </style>
+
+  <script>
+  // 🔧 Substitua pelos links reais do Mercado Pago
+  const PW_MP_LINKS = {
+    basic:   'https://www.mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=27ebb103fe7f4b79896c1bab3fbba34e',
+    pro:     'https://www.mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=d2e9a9c34db74ea9a5ab9cadcf811171',
+    premium: 'https://www.mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=47df5b41e79a4ce8aef081c3babd9d3f'
+  };
+
+  // Recursos liberados por plano
+  const PW_FEATURES = {
+    free:    [],
+    trial:   ['pdf','logo','word','excel','export'],
+    basic:   [],
+    pro:     ['pdf','logo'],
+    premium: ['pdf','logo','word','excel','export']
+  };
+
+  const PW_MESSAGES = {
+    pdf:    { icon:'📄', title:'PDF com Logo Personalizada',  subtitle:'Gere PDFs com a sua marca. Disponível a partir do plano Intermediário.' },
+    word:   { icon:'📝', title:'Exportação Word (.docx)',      subtitle:'Exporte seus orçamentos em Word. Exclusivo do plano Premium.' },
+    excel:  { icon:'📊', title:'Exportação Excel (.xlsx)',     subtitle:'Exporte para Excel. Exclusivo do plano Premium.' },
+    export: { icon:'📤', title:'Exportação Avançada',          subtitle:'Exporte em múltiplos formatos. Disponível no plano Premium.' },
+    logo:   { icon:'🎨', title:'Logo Personalizada',           subtitle:'Adicione sua logo aos documentos. Disponível a partir do Intermediário.' },
+  };
+
+  window.PaywallModal = {
+    getCurrentPlan() {
+      // 🔧 Adapte para ler do Supabase quando implementar o backend de planos
+      return localStorage.getItem('userPlan') || 'free';
+    },
+    hasAccess(feature) {
+      return (PW_FEATURES[this.getCurrentPlan()] || []).includes(feature);
+    },
+    open(feature) {
+      const msg = PW_MESSAGES[feature] || { icon:'🔒', title:'Recurso Premium', subtitle:'Este recurso requer um plano pago. Faça upgrade para continuar.' };
+      document.getElementById('pw-icon').textContent     = msg.icon;
+      document.getElementById('pw-title').textContent    = msg.title;
+      document.getElementById('pw-subtitle').textContent = msg.subtitle;
+      const modal = document.getElementById('paywall-modal');
+      modal.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    },
+    close() {
+      document.getElementById('paywall-modal').style.display = 'none';
+      document.body.style.overflow = '';
+    },
+    checkout(plan) {
+      localStorage.setItem('pendingPlan', plan);
+      this.close();
+      setTimeout(() => { window.location.href = PW_MP_LINKS[plan]; }, 150);
+    }
+  };
+
+  // Fechar ao clicar no backdrop
+  document.getElementById('paywall-modal').addEventListener('click', function(e) {
+    if (e.target === this) window.PaywallModal.close();
+  });
+  </script>
+
 </body>
 </html>
