@@ -360,10 +360,12 @@ class AuthManager {
       ? `<a href="planos.html" class="sidebar-plan-badge" title="Meu plano: ${cfg.label}" style="
             display:flex;align-items:center;gap:11px;
             width:100%;padding:10px 12px;margin:0 0 2px;
-            border-radius:8px;border:1px solid ${cfg.border};
-            background:${cfg.bg};text-decoration:none;
+            border-radius:8px;border:1px solid transparent;
+            background:transparent;text-decoration:none;
             box-sizing:border-box;transition:all 0.2s;cursor:pointer;
-          ">
+          "
+          onmouseover="this.style.background='${cfg.bg}';this.style.borderColor='${cfg.border}';"
+          onmouseout="this.style.background='transparent';this.style.borderColor='transparent';">
           <span style="font-size:17px;width:22px;text-align:center;flex-shrink:0;">${cfg.icon}</span>
           <div style="flex:1;min-width:0;">
             <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.8px;line-height:1;">Plano ativo</div>
@@ -374,10 +376,12 @@ class AuthManager {
       : `<a href="planos.html" class="sidebar-plan-badge" title="Escolha um plano" style="
             display:flex;align-items:center;gap:11px;
             width:100%;padding:10px 12px;margin:0 0 2px;
-            border-radius:8px;border:1px solid rgba(251,191,36,0.35);
-            background:rgba(251,191,36,0.08);text-decoration:none;
+            border-radius:8px;border:1px solid transparent;
+            background:transparent;text-decoration:none;
             box-sizing:border-box;transition:all 0.2s;cursor:pointer;
-          ">
+          "
+          onmouseover="this.style.background='rgba(251,191,36,0.08)';this.style.borderColor='rgba(251,191,36,0.35)';"
+          onmouseout="this.style.background='transparent';this.style.borderColor='transparent';">
           <span style="font-size:17px;width:22px;text-align:center;flex-shrink:0;">⚡</span>
           <div style="flex:1;min-width:0;">
             <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.8px;line-height:1;">Sem plano</div>
