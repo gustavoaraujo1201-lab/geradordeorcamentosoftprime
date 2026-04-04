@@ -45,8 +45,8 @@
     .sidebar-footer-role{font-size:11px;color:rgba(255,255,255,0.35);}
     .sidebar-logout-btn{background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.35);font-size:16px;padding:4px;transition:color 0.2s;border-radius:6px;flex-shrink:0;}
     .sidebar-logout-btn:hover{color:#f87171;background:rgba(248,113,113,0.1);}
-    .main-content{margin-left:240px;flex:1;min-width:0;}
-    .screen{padding:24px 20px 48px;max-width:1100px;margin:0 auto;}
+    .main-content{margin-left:240px;flex:1;min-width:0;padding-top:60px;}
+    .screen{padding:24px 20px 48px;max-width:1100px;margin:0 auto;min-width:0;}
     .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;border-radius:7px;border:1px solid rgba(20,30,40,0.12);background:#fff;color:#1a1a1a;font-weight:600;font-size:14px;cursor:pointer;transition:all 0.2s ease;font-family:inherit;white-space:nowrap;}
     .btn:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(20,30,40,0.12);}
     .btn-ghost{background:transparent;}
@@ -74,7 +74,7 @@
     .list li .meta{color:#6b7278;font-size:13px;}
     .list li .quote-actions{display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0;}
     .list li button{font-size:13px;padding:6px 11px;}
-    .screen-hero{background:linear-gradient(135deg,#0a1628 0%,#0d2b5e 55%,#0d7de0 100%);border-radius:12px;padding:28px 28px 24px;margin-bottom:24px;position:relative;overflow:hidden;}
+    .screen-hero{background:linear-gradient(135deg,#0a1628 0%,#0d2b5e 55%,#0d7de0 100%);border-radius:12px;padding:28px 28px 24px;margin-bottom:24px;position:relative;overflow:hidden;box-sizing:border-box;width:100%;}
     .screen-hero::before{content:'';position:absolute;top:-30px;right:-30px;width:160px;height:160px;background:radial-gradient(circle,rgba(255,255,255,0.06) 0%,transparent 70%);border-radius:50%;}
     .screen-hero h2{color:#fff;font-size:22px;font-weight:700;margin:0 0 4px;position:relative;z-index:1;}
     .screen-hero p{color:rgba(180,210,255,0.8);font-size:13px;margin:0;position:relative;z-index:1;}
@@ -115,8 +115,13 @@
 
       /* Layout */
       .app-layout{padding-top:56px;}
-      .main-content{margin-left:0!important;}
+      .main-content{margin-left:0!important;padding-top:56px!important;}
       .screen{padding:14px 10px 48px;}
+
+      /* Screen hero mobile */
+      .screen-hero{border-radius:8px;padding:18px 16px 16px;margin-bottom:16px;}
+      .screen-hero h2{font-size:18px;}
+      .screen-hero p{font-size:12px;}
 
       /* Cards e Forms */
       .card{padding:14px;margin-bottom:14px;}
@@ -224,8 +229,12 @@
   <div class="main-content">
     <div class="screen">
 
+      <div class="screen-hero">
+        <h2>💼 Novo Orçamento</h2>
+        <p>Preencha os dados abaixo para gerar um novo orçamento</p>
+      </div>
+
       <div class="card">
-        <h4>💼 Novo Orçamento</h4>
         <div class="form-grid" style="margin-bottom:20px;">
           <div>
             <label for="selectIssuer" style="display:block;margin-bottom:6px;font-weight:600;font-size:14px;color:#4b5563;">Emissor *</label>
