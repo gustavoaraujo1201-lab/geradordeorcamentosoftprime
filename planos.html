@@ -607,3 +607,72 @@ function startCheckout(plan) {
   document.getElementById('mp-loading').classList.add('show');
   setTimeout(() => { window.location.href = url; }, 900);
 }
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="auth.js"></script>
+<script>
+// ── Detecta usuário logado e adapta a UI ──
+(function detectLoggedUser() {
+  function waitForAuth(cb, tries) {
+    tries = tries || 0;
+    if (tries > 40) return;
+    if (window.authManager && window.authManager._initialized) {
+      cb(window.authManager);
+    } else {
+      setTimeout(() => waitForAuth(cb, tries + 1), 150);
+    }
+  }
+
+  waitForAuth(function(auth) {
+    const isLoggedIn = auth.isAuthenticated();
+    const plan = localStorage.getItem('softprime_plan');
+    const planLabels = { basic: 'Básico', pro: 'Intermediário', premium: 'Premium' };
+    const planLabel = planLabels[plan] || null;
+
+    // Adaptar botões do header se logado
+    const btnBack  = document.querySelector('.btn-back');
+    const btnLogin = document.querySelector('.btn-login');
+
+    if (isLoggedIn) {
+      if (btnBack)  { btnBack.href = 'index.html'; btnBack.textContent = '← Voltar ao app'; }
+      if (btnLogin) { btnLogin.style.display = 'none'; }
+
+      // Se já tem plano ativo, atualizar o hero-badge
+      if (plan && planLabel) {
+        const heroBadge = document.querySelector('.hero-badge');
+        if (heroBadge) {
+          heroBadge.innerHTML = `<span style="width:6px;height:6px;border-radius:50%;background:var(--accent-2);animation:pulse 2s infinite;display:inline-block;"></span>&nbsp; Plano atual: <strong style="color:#fff;">${planLabel}</strong> — faça upgrade aqui`;
+        }
+      }
+    }
+
+    // Detectar retorno do Mercado Pago (?payment_id ou ?status=approved)
+    const params = new URLSearchParams(window.location.search);
+    const paymentId = params.get('payment_id') || params.get('collection_id');
+    const status    = params.get('status') || params.get('collection_status');
+
+    if (paymentId || status === 'approved') {
+      document.querySelector('.page').innerHTML = `
+        <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:40px 20px;">
+          <div>
+            <div style="font-size:72px;margin-bottom:20px;">🎉</div>
+            <h1 style="font-family:'DM Sans',sans-serif;font-size:clamp(28px,5vw,48px);font-weight:800;color:#fff;margin-bottom:12px;">Pagamento confirmado!</h1>
+            <p style="color:rgba(160,200,255,0.7);font-size:16px;margin-bottom:32px;max-width:400px;margin-left:auto;margin-right:auto;">
+              Seu plano foi ativado com sucesso. Você será redirecionado para o sistema em instantes.
+            </p>
+            <div style="width:200px;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;margin:0 auto;overflow:hidden;">
+              <div style="height:100%;background:var(--accent);border-radius:2px;animation:loadBar 2.5s ease forwards;"></div>
+            </div>
+            <style>@keyframes loadBar{from{width:0}to{width:100%}}</style>
+          </div>
+        </div>`;
+      setTimeout(() => { window.location.href = 'index.html'; }, 2800);
+    }
+  });
+})();
+</script>
+
+</body>
+</html>

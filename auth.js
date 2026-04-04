@@ -128,6 +128,11 @@ class AuthManager {
     return p.endsWith('login.html') || p === '/login' || p === '/login/';
   }
 
+  _isPlanosPage() {
+    const p = window.location.pathname;
+    return p.endsWith('planos.html');
+  }
+
   _isAppPage() {
     const p = window.location.pathname;
     // Reconhece as 3 páginas do app: início, cadastro e orçamentos salvos
@@ -135,6 +140,17 @@ class AuthManager {
         || p.endsWith('cadastro.html')
         || p.endsWith('orcamentos_salvos.html')
         || p === '/' || p === '' || p === '/index' || p === '/index/';
+  }
+
+  // Retorna o plano atual do usuário (lido do localStorage)
+  getUserPlan() {
+    return localStorage.getItem('softprime_plan') || null;
+  }
+
+  // Retorna label legível do plano
+  getUserPlanLabel() {
+    const map = { basic: 'Básico', pro: 'Intermediário', premium: 'Premium' };
+    return map[this.getUserPlan()] || null;
   }
 
   // ── Remove a tela de bloqueio ──────────────────────────────────
@@ -149,6 +165,9 @@ class AuthManager {
   _updateAppUI() {
     // Remove guard imediatamente — libera a tela
     this._removeGuard();
+
+    // Injeta badge do plano na sidebar (desktop e mobile)
+    this._renderPlanBadge();
 
     const userNameEl = document.getElementById('userName');
     if (userNameEl && this.currentUser) {
@@ -315,6 +334,86 @@ class AuthManager {
       return { success: true, message: '✅ Email de recuperação enviado!' };
     } catch (err) {
       return { success: false, message: `❌ ${err.message}` };
+    }
+  }
+
+  // ── Plan Badge na Sidebar ─────────────────────────────────────
+
+  _renderPlanBadge() {
+    const plan = this.getUserPlan();
+    const planLabel = this.getUserPlanLabel();
+
+    // Configurações visuais por plano
+    const planConfig = {
+      basic:   { label: 'Básico',        color: '#60a5fa', bg: 'rgba(96,165,250,0.12)',   border: 'rgba(96,165,250,0.25)',  icon: '📄' },
+      pro:     { label: 'Intermediário', color: '#34d399', bg: 'rgba(52,211,153,0.12)',   border: 'rgba(52,211,153,0.25)',  icon: '🚀' },
+      premium: { label: 'Premium',       color: '#fbbf24', bg: 'rgba(251,191,36,0.12)',   border: 'rgba(251,191,36,0.25)',  icon: '👑' },
+    };
+
+    const cfg = plan ? planConfig[plan] : null;
+
+    // Monta o HTML do badge
+    const badgeHtml = cfg
+      ? `<a href="planos.html" class="sidebar-plan-badge" title="Meu plano: ${cfg.label}" style="
+            display:flex;align-items:center;gap:8px;
+            padding:9px 12px;margin:0 12px 8px;
+            border-radius:8px;border:1px solid ${cfg.border};
+            background:${cfg.bg};text-decoration:none;
+            transition:all 0.2s;cursor:pointer;
+          ">
+          <span style="font-size:15px;">${cfg.icon}</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.8px;line-height:1;">Plano ativo</div>
+            <div style="font-size:13px;font-weight:600;color:${cfg.color};margin-top:2px;line-height:1;">${cfg.label}</div>
+          </div>
+          <span style="font-size:10px;color:rgba(255,255,255,0.3);">›</span>
+        </a>`
+      : `<a href="planos.html" class="sidebar-plan-badge" title="Escolha um plano" style="
+            display:flex;align-items:center;gap:8px;
+            padding:9px 12px;margin:0 12px 8px;
+            border-radius:8px;border:1px solid rgba(251,191,36,0.35);
+            background:rgba(251,191,36,0.08);text-decoration:none;
+            transition:all 0.2s;cursor:pointer;
+          ">
+          <span style="font-size:15px;">⚡</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.8px;line-height:1;">Sem plano</div>
+            <div style="font-size:12px;font-weight:600;color:#fbbf24;margin-top:2px;line-height:1;">Ver planos →</div>
+          </div>
+        </a>`;
+
+    // Insere antes do primeiro sidebar-btn da nav (desktop)
+    const sidebarNav = document.querySelector('.sidebar-nav');
+    if (sidebarNav) {
+      // Remove badge anterior se existir
+      const old = sidebarNav.querySelector('.sidebar-plan-badge');
+      if (old) old.remove();
+
+      // Insere após o label "Menu"
+      const label = sidebarNav.querySelector('.sidebar-section-label');
+      if (label) {
+        label.insertAdjacentHTML('afterend', badgeHtml);
+      } else {
+        sidebarNav.insertAdjacentHTML('afterbegin', badgeHtml);
+      }
+    }
+
+    // Atualiza também a área mobile (sidebarMobileProfile)
+    const mobileProfile = document.getElementById('sidebarMobileProfile');
+    if (mobileProfile) {
+      const oldMobile = mobileProfile.querySelector('.sidebar-plan-badge-mobile');
+      if (oldMobile) oldMobile.remove();
+
+      const mobileBadgeHtml = cfg
+        ? `<a href="planos.html" class="sidebar-plan-badge-mobile sidebar-btn" style="color:${cfg.color};border:1px solid ${cfg.border};background:${cfg.bg};">
+            <span>${cfg.icon}</span><span>Plano ${cfg.label}</span>
+           </a>`
+        : `<a href="planos.html" class="sidebar-plan-badge-mobile sidebar-btn" style="color:#fbbf24;border:1px solid rgba(251,191,36,0.3);background:rgba(251,191,36,0.08);">
+            <span>⚡</span><span>Ver planos</span>
+           </a>`;
+
+      const mobileLabel = mobileProfile.querySelector('.sidebar-section-label');
+      if (mobileLabel) mobileLabel.insertAdjacentHTML('afterend', mobileBadgeHtml);
     }
   }
 
