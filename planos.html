@@ -598,7 +598,12 @@ function startCheckout(plan) {
   const period = isAnnual ? 'annual' : 'monthly';
   const url = MP_LINKS[plan][period];
 
-  // Exibe loading
-  document.getElementById('mp-loading').classList.add('show');
+  // Salva o plano escolhido no localStorage para o app.js ler após retorno do MP
+  localStorage.setItem('softprime_plan', plan);
+  localStorage.setItem('softprime_plan_period', period);
+  localStorage.setItem('softprime_plan_ts', Date.now());
 
+  // Exibe loading e redireciona para o Mercado Pago
+  document.getElementById('mp-loading').classList.add('show');
+  setTimeout(() => { window.location.href = url; }, 900);
 }

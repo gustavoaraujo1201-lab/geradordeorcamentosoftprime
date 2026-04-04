@@ -1251,3 +1251,110 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   // Caso contrário, o authManager vai chamar initApp() diretamente via _updateAppUI
 });
+
+// ========== PAYWALL MODAL ==========
+// Lê o plano salvo pelo planos.html após retorno do Mercado Pago
+window.PaywallModal = (function () {
+
+  // Mapeamento de planos e suas permissões
+  const PLAN_LEVELS = { basic: 1, pro: 2, premium: 3 };
+  const FEATURE_REQUIREMENTS = {
+    export: 1,   // Básico ou acima
+    pdf:    2,   // Intermediário ou acima
+    word:   3,   // Premium
+    excel:  3,   // Premium
+  };
+  const PLAN_NAMES = { basic: 'Básico', pro: 'Intermediário', premium: 'Premium' };
+  const FEATURE_LABELS = {
+    export: 'Exportação CSV',
+    pdf:    'PDF com logo personalizada',
+    word:   'Exportação Word (.docx)',
+    excel:  'Exportação Excel (.xlsx)',
+  };
+  const REQUIRED_PLAN_NAME = {
+    export: 'Básico',
+    pdf:    'Intermediário',
+    word:   'Premium',
+    excel:  'Premium',
+  };
+
+  function getCurrentPlan() {
+    return localStorage.getItem('softprime_plan') || null;
+  }
+
+  function hasAccess(feature) {
+    const plan = getCurrentPlan();
+    if (!plan) return false;
+    const userLevel = PLAN_LEVELS[plan] || 0;
+    const required = FEATURE_REQUIREMENTS[feature] || 99;
+    return userLevel >= required;
+  }
+
+  function open(feature) {
+    // Remove modal anterior se existir
+    const existing = document.getElementById('sp-paywall-modal');
+    if (existing) existing.remove();
+
+    const plan = getCurrentPlan();
+    const planLabel = plan ? PLAN_NAMES[plan] : null;
+    const featureLabel = FEATURE_LABELS[feature] || feature;
+    const requiredPlan = REQUIRED_PLAN_NAME[feature] || 'Premium';
+
+    const modal = document.createElement('div');
+    modal.id = 'sp-paywall-modal';
+    modal.style.cssText = `
+      position:fixed;inset:0;z-index:99999;
+      display:flex;align-items:center;justify-content:center;
+      background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);
+      padding:20px;
+    `;
+
+    modal.innerHTML = `
+      <div style="
+        background:#1f2937;border:1px solid rgba(99,102,241,0.3);
+        border-radius:16px;padding:32px 28px;max-width:420px;width:100%;
+        box-shadow:0 24px 60px rgba(0,0,0,0.5);text-align:center;
+        font-family:'DM Sans',sans-serif;color:#f0f6ff;
+      ">
+        <div style="font-size:40px;margin-bottom:12px;">🔒</div>
+        <h3 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#fff;">
+          Recurso bloqueado
+        </h3>
+        <p style="margin:0 0 6px;font-size:14px;color:rgba(160,200,255,0.7);">
+          <strong style="color:#a5b4fc;">${featureLabel}</strong> requer o plano
+          <strong style="color:#fff;">${requiredPlan}</strong>.
+        </p>
+        ${planLabel
+          ? `<p style="margin:0 0 20px;font-size:13px;color:rgba(160,200,255,0.5);">
+              Seu plano atual: <strong style="color:#6ee7b7;">${planLabel}</strong>
+             </p>`
+          : `<p style="margin:0 0 20px;font-size:13px;color:rgba(160,200,255,0.5);">
+              Você ainda não possui um plano ativo.
+             </p>`
+        }
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+          <button onclick="document.getElementById('sp-paywall-modal').remove()" style="
+            padding:10px 20px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);
+            background:transparent;color:rgba(255,255,255,0.6);font-size:14px;
+            cursor:pointer;font-family:inherit;
+          ">Fechar</button>
+          <a href="planos.html" style="
+            padding:10px 22px;border-radius:8px;border:none;
+            background:linear-gradient(135deg,#6366f1,#8b5cf6);
+            color:#fff;font-size:14px;font-weight:600;
+            cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;
+          ">⚡ Ver planos</a>
+        </div>
+      </div>
+    `;
+
+    // Fechar ao clicar fora
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.remove();
+    });
+
+    document.body.appendChild(modal);
+  }
+
+  return { hasAccess, open, getCurrentPlan };
+})();
