@@ -475,8 +475,9 @@
       if (!isVisible) {
         const rect = profileBtn.getBoundingClientRect();
         profileDropdown.style.top = (rect.bottom + 8) + 'px';
-        profileDropdown.style.minWidth = '200px';
-        profileDropdown.style.left = Math.max(8, rect.right - 200) + 'px';
+        profileDropdown.style.minWidth = rect.width + 'px';
+        profileDropdown.style.width = rect.width + 'px';
+        profileDropdown.style.left = rect.left + 'px';
       }
     });
     document.addEventListener('click', () => { if(profileDropdown) profileDropdown.style.display='none'; });
