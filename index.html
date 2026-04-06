@@ -798,6 +798,17 @@
       const pm=document.getElementById('previewModal'); if(pm&&!pm.classList.contains('hidden')){ pm.classList.add('hidden'); return; }
       const pf=document.getElementById('profileModal'); if(pf&&!pf.classList.contains('hidden')) pf.classList.add('hidden');
     });
+
+    // ── Ocultar botão WhatsApp quando modal de perfil estiver aberto ──
+    (function(){
+      function findWaBtn(){ return document.querySelector('a[href*="wa.me"],a[href*="whatsapp"],div[class*="whatsapp"],a[class*="whatsapp"],[id*="whatsapp"],[id*="whats"]'); }
+      function hideWa(){ const b=findWaBtn(); if(b) b.style.setProperty('display','none','important'); }
+      function showWa(){ const b=findWaBtn(); if(b) b.style.removeProperty('display'); }
+      const pm=document.getElementById('profileModal');
+      if(!pm) return;
+      const obs=new MutationObserver(()=>{ pm.classList.contains('hidden')?showWa():hideWa(); });
+      obs.observe(pm,{attributes:true,attributeFilter:['class']});
+    })();
   </script>
 
   <!-- ═══════════════════════════════════════════════════
