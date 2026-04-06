@@ -2,9 +2,41 @@
   "redirects": [
     {
       "source": "/",
-      "destination": "/login.html",
+      "destination": "/login",
       "permanent": false
+    },
+    {
+      "source": "/login.html",
+      "destination": "/login",
+      "permanent": true
+    },
+    {
+      "source": "/index.html",
+      "destination": "/index",
+      "permanent": true
+    },
+    {
+      "source": "/cadastro.html",
+      "destination": "/cadastro",
+      "permanent": true
+    },
+    {
+      "source": "/orcamentos_salvos.html",
+      "destination": "/orcamentos_salvos",
+      "permanent": true
+    },
+    {
+      "source": "/planos.html",
+      "destination": "/planos",
+      "permanent": true
     }
+  ],
+  "rewrites": [
+    { "source": "/login", "destination": "/login.html" },
+    { "source": "/index", "destination": "/index.html" },
+    { "source": "/cadastro", "destination": "/cadastro.html" },
+    { "source": "/orcamentos_salvos", "destination": "/orcamentos_salvos.html" },
+    { "source": "/planos", "destination": "/planos.html" }
   ],
   "headers": [
     {
