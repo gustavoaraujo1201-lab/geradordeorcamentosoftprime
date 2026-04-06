@@ -566,6 +566,21 @@
       window.location.href = '/index';
     }
 
+    async function deleteQuote(id) {
+      if (!confirm('Tem certeza que deseja excluir este orçamento? Esta ação não pode ser desfeita.')) return;
+      try {
+        await dbDeleteQuote(id);
+        // Remove do store local
+        if (typeof store !== 'undefined' && Array.isArray(store.quotes)) {
+          store.quotes = store.quotes.filter(q => q.id !== id);
+        }
+        showNotification('Orçamento excluído com sucesso.', 'success');
+        renderPanel();
+      } catch(err) {
+        console.error('[deleteQuote]', err);
+        showNotification('Erro ao excluir orçamento. Tente novamente.', 'error');
+      }
+    }
 
     // ── Carrega jsPDF sob demanda (leve, funciona em mobile) ─────────────────
     function loadJsPDF() {
