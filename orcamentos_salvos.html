@@ -650,19 +650,25 @@
       y += boxH + 8;
 
       // ── Cabeçalho da tabela de itens ─────────────────────────────────────────
-      const colDesc  = cW * 0.55;
-      const colQtd   = cW * 0.10;
-      const colVUnit = cW * 0.17;
+      const colDesc  = cW * 0.52;
+      const colQtd   = cW * 0.12;
+      const colVUnit = cW * 0.18;
       const colTot   = cW * 0.18;
       const rowH     = 8;
+
+      // Posições X iniciais de cada coluna
+      const xDesc  = mL;
+      const xQtd   = xDesc  + colDesc;
+      const xVUnit = xQtd   + colQtd;
+      const xTot   = xVUnit + colVUnit;
 
       setFill('#0d7de0'); setStroke('#0a5fb8');
       pdf.rect(mL, y, cW, rowH, 'F');
       pdf.setFont('helvetica','bold'); pdf.setFontSize(9); setTxt('#ffffff');
-      pdf.text('Descricao',        mL + 3,            y + 5.5);
-      pdf.text('Qtd',              mL + colDesc + colQtd/2,   y + 5.5, {align:'center'});
-      pdf.text('Valor Unit.',      mL + colDesc + colQtd + colVUnit - 3, y + 5.5, {align:'right'});
-      pdf.text('Total',            mL + cW - 3,       y + 5.5, {align:'right'});
+      pdf.text('Descricao',   xDesc  + 3,           y + 5.5);
+      pdf.text('Qtd',         xQtd   + colQtd/2,    y + 5.5, {align:'center'});
+      pdf.text('Valor Unit.', xVUnit + colVUnit - 3, y + 5.5, {align:'right'});
+      pdf.text('Total',       xTot   + colTot  - 3, y + 5.5, {align:'right'});
       y += rowH;
 
       // ── Linhas de itens ──────────────────────────────────────────────────────
@@ -685,18 +691,18 @@
         pdf.rect(mL, y, cW, cellH, 'S');
 
         pdf.setFont('helvetica','normal'); pdf.setFontSize(9); setTxt('#1a1a1a');
-        pdf.text(descLines, mL + 3, y + 5);
-        pdf.text(String(it.quantidade||0),                   mL + colDesc + colQtd/2, y + 5, {align:'center'});
-        pdf.text('R$ ' + mf(it.valorUnitario),               mL + colDesc + colQtd + colVUnit - 3, y + 5, {align:'right'});
+        pdf.text(descLines,                                          xDesc  + 3,           y + 5);
+        pdf.text(String(it.quantidade||0),                           xQtd   + colQtd/2,    y + 5, {align:'center'});
+        pdf.text('R$ ' + mf(it.valorUnitario),                       xVUnit + colVUnit - 3, y + 5, {align:'right'});
         pdf.setFont('helvetica','bold');
-        pdf.text('R$ ' + mf((it.quantidade||0)*(it.valorUnitario||0)), mL + cW - 3, y + 5, {align:'right'});
+        pdf.text('R$ ' + mf((it.quantidade||0)*(it.valorUnitario||0)), xTot + colTot - 3,  y + 5, {align:'right'});
         y += cellH;
       });
 
       // ── Linha de total ───────────────────────────────────────────────────────
       if (y + 10 > H - 30) { pdf.addPage(); y = mT; }
       const totW = colVUnit + colTot;
-      const totX = mL + colDesc + colQtd;
+      const totX = xVUnit;
       setFill('#eef6ff'); setStroke('#93c5fd');
       pdf.rect(totX, y, totW, 10, 'FD');
       pdf.setFont('helvetica','bold'); pdf.setFontSize(10); setTxt('#0d7de0');
@@ -729,10 +735,10 @@
       pdf.text(cleanStr(iss.name||''), W/2, y+6, {align:'center'});
       y += 14;
 
-      // ── Rodapé ───────────────────────────────────────────────────────────────
+      // ── Rodapé fixo no fundo da página ───────────────────────────────────────
       const dateStr = q.createdAt ? new Date(q.createdAt).toLocaleDateString('pt-BR') : '';
       pdf.setFont('helvetica','normal'); pdf.setFontSize(8); setTxt('#9ca3af');
-      pdf.text('Orcamento gerado em: ' + dateStr + ' - SoftPrime', W/2, y+4, {align:'center'});
+      pdf.text('Orcamento gerado em: ' + dateStr + ' - SoftPrime', W/2, H - 8, {align:'center'});
 
       return pdf.output('blob');
     }
@@ -817,18 +823,17 @@
       // ── WhatsApp ─────────────────────────────────────────────────────────────
       document.getElementById('sp-share-wpp').addEventListener('click', async function() {
         await withPdfBlob(this, async (blob, blobUrl, file) => {
-          const msgText = 'Ola! Segue o orcamento *' + num + '*.\n\nDe: ' + (iss.name||'—') + '\nPara: ' + (cli.name||'—') + '\nValor: ' + totalFmt + '\n\nGerado pelo SoftPrime.';
-
-          // Celular com Web Share API (Android/iOS) — compartilha o PDF direto
+          // Celular com Web Share API (Android/iOS) — compartilha o PDF direto, sem legenda
           if (navigator.canShare && navigator.canShare({ files:[file] })) {
-            await navigator.share({ files:[file], title:'Orcamento '+num, text: msgText });
+            await navigator.share({ files:[file], title:'Orcamento '+num });
             return;
           }
           // Desktop — baixa o PDF e abre WhatsApp Web
+          const msgText = 'Ola! Segue o orcamento *' + num + '*.\n\nDe: ' + (iss.name||'—') + '\nPara: ' + (cli.name||'—') + '\nValor: ' + totalFmt + '\n\n(Anexe o PDF que foi baixado automaticamente)';
           const a = document.createElement('a');
           a.href = blobUrl; a.download = fileName; a.click();
           setTimeout(() => {
-            window.open('https://wa.me/?text=' + encodeURIComponent(msgText + '\n\n(Anexe o PDF que foi baixado automaticamente)'), '_blank');
+            window.open('https://wa.me/?text=' + encodeURIComponent(msgText), '_blank');
           }, 600);
         });
       });
