@@ -356,14 +356,20 @@ function renderClients(){
   if (clientList) clientList.innerHTML = "";
   selectClient.innerHTML = "<option value=''>-- selecione o cliente --</option>";
 
-  (store.clients||[]).forEach(c => {
+  // Ordena A-Z (sem acentos)
+  const sorted = (store.clients||[]).slice().sort((a,b) =>
+    normalizeStr(a.name||'').localeCompare(normalizeStr(b.name||''))
+  );
+
+  sorted.forEach(c => {
     if (clientList){
       const li = document.createElement("li");
       li.innerHTML = `
         <div>
           <strong>${escapeHtml(c.name)}</strong>
           <div class="meta">${escapeHtml(c.cnpjCpf||'')} ${c.phone ? '• ' + escapeHtml(c.phone) : ''}</div>
-          <div class="meta">${escapeHtml(c.address||'')}</div>
+          <div class="meta">${escapeHtml(c.address||''
+)}</div>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
           <button class="btn btn-outline edit-client" data-id="${c.id}">✏️ Editar</button>
@@ -376,6 +382,11 @@ function renderClients(){
     opt.textContent = `${c.name} ${c.cnpjCpf ? '— ' + c.cnpjCpf : ''}`;
     selectClient.appendChild(opt);
   });
+
+  // Alimenta o componente de busca com autocomplete (index.html)
+  if (typeof window._updateClientSearchList === 'function'){
+    window._updateClientSearchList(sorted);
+  }
 }
 
 function renderQuotes(){
@@ -762,7 +773,7 @@ function startEditMode(quoteId){
   if (!q){ showNotification("Orçamento não encontrado","error"); return; }
   editingQuoteId=quoteId;
   if (selectIssuer) selectIssuer.value=q.issuerId||"";
-  if (selectClient) selectClient.value=q.clientId||"";
+  if (selectClient){ selectClient.value=q.clientId||""; selectClient.dispatchEvent(new Event("change",{bubbles:true})); }
   if (quoteNumber){ quoteNumber.value=q.numero||""; quoteNumber.removeAttribute("readonly"); }
   if (quoteDate){ quoteDate.value=(q.createdAt||new Date().toISOString()).slice(0,10); quoteDate.removeAttribute('readonly'); }
   if (notes) notes.value=q.notes||"";
@@ -779,6 +790,9 @@ function endEditMode(){
   if (saveQuoteBtn) saveQuoteBtn.textContent="📄 Gerar Orçamento";
   if (cancelEditBtn) cancelEditBtn.style.display="none";
   if (quoteNumber) quoteNumber.setAttribute("readonly","true");
+  // Limpa select oculto e sincroniza o componente visual
+  if (selectClient){ selectClient.value=""; selectClient.dispatchEvent(new Event("change",{bubbles:true})); }
+  if (selectIssuer) selectIssuer.value="";
   setDefaultQuoteFields();
   if (notes) notes.value="";
 }

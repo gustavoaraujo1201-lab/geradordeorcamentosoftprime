@@ -185,7 +185,71 @@
 
       /* Toast */
       #sp-toast{bottom:80px!important;right:12px!important;left:12px!important;max-width:none!important;}
+
+      /* Client search — mobile adjustments */
+      #clientSearchInput { font-size:16px!important; min-height:46px; }
+      #clientTypeInput   { font-size:16px!important; min-height:44px; }
+      #clientDropdown    { max-height:260px; border-radius:12px; }
+      #clientOptionsList li { min-height:50px; font-size:15px; }
     }
+
+    /* ── Client search autocomplete ── */
+    #clientSearchInput:focus {
+      outline:none;
+      border-color:#0d7de0;
+      box-shadow:0 0 0 3px rgba(13,125,224,0.10);
+      cursor:text;
+    }
+    #clientSearchInput.has-value {
+      background:#f0f7ff;
+      border-color:#0d7de0;
+      color:#0d2b5e;
+      font-weight:600;
+      cursor:pointer;
+    }
+    #clientOptionsList li {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:11px 16px;
+      cursor:pointer;
+      font-size:14px;
+      color:#1a1a1a;
+      border-radius:0;
+      transition:background 0.12s;
+      border-bottom:1px solid #f3f4f6;
+      -webkit-tap-highlight-color:transparent;
+    }
+    #clientOptionsList li:last-child { border-bottom:none; }
+    #clientOptionsList li:hover,
+    #clientOptionsList li:active    { background:#f0f7ff; }
+    #clientOptionsList li.selected  {
+      background:#e8f3ff;
+      font-weight:700;
+      color:#0d7de0;
+    }
+    #clientOptionsList li .cli-avatar {
+      width:34px; height:34px; border-radius:50%;
+      background:linear-gradient(135deg,#6366f1,#8b5cf6);
+      color:#fff; font-size:13px; font-weight:700;
+      display:flex;align-items:center;justify-content:center;
+      flex-shrink:0;
+    }
+    #clientOptionsList li.selected .cli-avatar {
+      background:linear-gradient(135deg,#0d7de0,#0a5fb8);
+    }
+    #clientOptionsList li .cli-info { flex:1; min-width:0; }
+    #clientOptionsList li .cli-name {
+      display:block; font-size:14px; font-weight:600; color:#1a1a1a;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    #clientOptionsList li.selected .cli-name { color:#0d7de0; }
+    #clientOptionsList li .cli-sub {
+      display:block; font-size:12px; color:#6b7280; margin-top:1px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    #clientOptionsList li .cli-check { color:#0d7de0; font-size:18px; flex-shrink:0; }
+    mark.sp-hl { background:#fff3bf; color:#92400e; border-radius:2px; padding:0 1px; font-style:normal; }
   </style>
   <title>Início — SoftPrime</title>
 </head>
@@ -264,9 +328,51 @@
             <label for="selectIssuer" style="display:block;margin-bottom:6px;font-weight:600;font-size:14px;color:#4b5563;">Emissor *</label>
             <select id="selectIssuer" required><option value="">-- selecione o emissor --</option></select>
           </div>
-          <div>
-            <label for="selectClient" style="display:block;margin-bottom:6px;font-weight:600;font-size:14px;color:#4b5563;">Cliente *</label>
-            <select id="selectClient" required><option value="">-- selecione o cliente --</option></select>
+          <div style="position:relative;">
+            <label for="clientSearchInput" style="display:block;margin-bottom:6px;font-weight:600;font-size:14px;color:#4b5563;">Cliente *</label>
+            <!-- Componente de busca de cliente — substitui o select nativo -->
+            <div id="clientSearchWrapper" style="position:relative;">
+              <div style="position:relative;display:flex;align-items:center;">
+                <span style="position:absolute;left:13px;font-size:16px;pointer-events:none;z-index:1;">🔍</span>
+                <input
+                  id="clientSearchInput"
+                  type="text"
+                  autocomplete="off"
+                  autocorrect="off"
+                  autocapitalize="off"
+                  spellcheck="false"
+                  placeholder="Digite para buscar cliente..."
+                  style="width:100%;padding:11px 40px 11px 38px;border-radius:7px;border:1.5px solid rgba(20,30,40,0.12);background:#fff;color:#1a1a1a;font-size:14px;font-family:inherit;transition:all 0.2s ease;cursor:pointer;"
+                  readonly
+                />
+                <button id="clientSearchClear" type="button" title="Limpar seleção"
+                  style="display:none;position:absolute;right:10px;background:none;border:none;cursor:pointer;padding:4px 6px;font-size:18px;color:#9ca3af;line-height:1;border-radius:4px;transition:color 0.15s;"
+                  onmouseover="this.style.color='#dc2626'" onmouseout="this.style.color='#9ca3af'">×</button>
+              </div>
+              <div id="clientDropdown"
+                style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1.5px solid #0d7de0;border-radius:10px;box-shadow:0 8px 32px rgba(13,125,224,0.18);z-index:9999;max-height:280px;overflow:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+                <div id="clientDropdownSearch" style="padding:10px 12px;border-bottom:1px solid #f0f4f8;position:sticky;top:0;background:#fff;z-index:1;">
+                  <input
+                    id="clientTypeInput"
+                    type="search"
+                    autocomplete="off"
+                    autocorrect="off"
+                    autocapitalize="off"
+                    spellcheck="false"
+                    placeholder="🔍 Buscar pelo nome..."
+                    style="width:100%;padding:9px 12px;border-radius:6px;border:1.5px solid #e5e7eb;background:#f9fafb;color:#1a1a1a;font-size:15px;font-family:inherit;outline:none;transition:border-color 0.2s;"
+                    onfocus="this.style.borderColor='#0d7de0';this.style.background='#fff'"
+                    onblur="this.style.borderColor='#e5e7eb';this.style.background='#f9fafb'"
+                  />
+                </div>
+                <ul id="clientOptionsList" style="list-style:none;padding:6px 0;margin:0;"></ul>
+                <div id="clientNoResults" style="display:none;padding:20px 16px;text-align:center;color:#9ca3af;font-size:14px;">
+                  😕 Nenhum cliente encontrado
+                </div>
+              </div>
+            </div>
+            <!-- Select oculto — mantido para compatibilidade com app.js -->
+            <select id="selectClient" required style="display:none;"><option value="">-- selecione o cliente --</option></select>
           </div>
         </div>
         <div class="form-grid" style="margin-bottom:20px;padding:16px;background:#f9fafb;border-radius:8px;">
@@ -957,6 +1063,154 @@
   document.getElementById('paywall-modal').addEventListener('click', function(e) {
     if (e.target === this) window.PaywallModal.close();
   });
+  </script>
+
+  <!-- ========== CLIENT SEARCH AUTOCOMPLETE ========== -->
+  <script>
+  (function(){
+    function initClientSearch(){
+      var searchInput  = document.getElementById('clientSearchInput');
+      var typeInput    = document.getElementById('clientTypeInput');
+      var dropdown     = document.getElementById('clientDropdown');
+      var optionsList  = document.getElementById('clientOptionsList');
+      var noResults    = document.getElementById('clientNoResults');
+      var clearBtn     = document.getElementById('clientSearchClear');
+      var hiddenSelect = document.getElementById('selectClient');
+      if (!searchInput || !hiddenSelect) return;
+
+      var _allClients = [];
+      var _selectedId = '';
+      var _isOpen     = false;
+
+      function norm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+      function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+      function initials(name){ var p=String(name||'').trim().split(/\s+/); return p.length>=2?(p[0][0]+p[p.length-1][0]).toUpperCase():(p[0]||'?')[0].toUpperCase(); }
+
+      function highlight(text, query){
+        if (!query) return escHtml(text);
+        var n=norm(text), q=norm(query), i=n.indexOf(q);
+        if (i===-1) return escHtml(text);
+        return escHtml(text.slice(0,i))+'<mark class="sp-hl">'+escHtml(text.slice(i,i+q.length))+'</mark>'+escHtml(text.slice(i+q.length));
+      }
+
+      // Chamado pelo app.js via window._updateClientSearchList(clients)
+      window._updateClientSearchList = function(clients){
+        _allClients = (clients||[])
+          .map(function(c){ return {id:c.id, label:c.name||'', sub:[c.cnpjCpf,c.phone].filter(Boolean).join(' \u2022 ')}; })
+          .sort(function(a,b){ return norm(a.label).localeCompare(norm(b.label)); });
+        renderOptions('');
+        if (_selectedId){
+          var found=_allClients.find(function(c){return c.id===_selectedId;});
+          if (found) applySelection(found.id, found.label, false);
+          else clearSelection(false);
+        }
+      };
+
+      // Sincroniza quando o app.js muda o select oculto (ex: editar orçamento)
+      hiddenSelect.addEventListener('change', function(){ syncFromHiddenSelect(); });
+
+      function syncFromHiddenSelect(){
+        var val=hiddenSelect.value;
+        if (!val){ clearSelection(false); return; }
+        var found=_allClients.find(function(c){return c.id===val;});
+        if (found && found.id!==_selectedId) applySelection(found.id, found.label, false);
+      }
+
+      function renderOptions(query){
+        var q=norm(query);
+        var filtered = q
+          ? _allClients.filter(function(c){ return norm(c.label).includes(q)||norm(c.sub).includes(q); })
+          : _allClients;
+        optionsList.innerHTML='';
+        noResults.style.display = filtered.length ? 'none' : 'block';
+        filtered.forEach(function(c){
+          var li=document.createElement('li');
+          li.dataset.id=c.id;
+          if (c.id===_selectedId) li.classList.add('selected');
+          li.innerHTML='<div class="cli-avatar">'+escHtml(initials(c.label))+'</div>'
+            +'<div class="cli-info">'
+            +'<span class="cli-name">'+highlight(c.label,query)+'</span>'
+            +(c.sub?'<span class="cli-sub">'+highlight(c.sub,query)+'</span>':'')
+            +'</div>'
+            +(c.id===_selectedId?'<span class="cli-check">✓</span>':'');
+          li.addEventListener('mousedown', function(e){e.preventDefault();});
+          li.addEventListener('click',    function(){ applySelection(c.id,c.label); closeDropdown(); });
+          li.addEventListener('touchend', function(e){ e.preventDefault(); applySelection(c.id,c.label); closeDropdown(); });
+          optionsList.appendChild(li);
+        });
+      }
+
+      function applySelection(id, label, updateHidden){
+        if (updateHidden===undefined) updateHidden=true;
+        _selectedId=id;
+        searchInput.value=label;
+        searchInput.classList.add('has-value');
+        clearBtn.style.display='block';
+        if (updateHidden){
+          hiddenSelect.value=id;
+          hiddenSelect.dispatchEvent(new Event('change',{bubbles:true}));
+        }
+      }
+
+      function clearSelection(updateHidden){
+        if (updateHidden===undefined) updateHidden=true;
+        _selectedId='';
+        searchInput.value='';
+        searchInput.classList.remove('has-value');
+        clearBtn.style.display='none';
+        if (typeInput) typeInput.value='';
+        renderOptions('');
+        if (updateHidden){
+          hiddenSelect.value='';
+          hiddenSelect.dispatchEvent(new Event('change',{bubbles:true}));
+        }
+      }
+
+      function openDropdown(){
+        if (_isOpen) return;
+        _isOpen=true;
+        renderOptions(typeInput ? typeInput.value : '');
+        dropdown.style.display='block';
+        searchInput.removeAttribute('readonly');
+        setTimeout(function(){ if(typeInput) typeInput.focus(); }, 80);
+      }
+
+      function closeDropdown(){
+        if (!_isOpen) return;
+        _isOpen=false;
+        dropdown.style.display='none';
+        searchInput.setAttribute('readonly','');
+      }
+
+      searchInput.addEventListener('click',    function(){ openDropdown(); });
+      searchInput.addEventListener('touchend', function(e){ e.preventDefault(); openDropdown(); });
+
+      if (typeInput){
+        typeInput.addEventListener('input',   function(){ renderOptions(typeInput.value); });
+        typeInput.addEventListener('keydown', function(e){
+          if (e.key==='Escape'){ closeDropdown(); }
+          if (e.key==='Enter'){ e.preventDefault(); var f=optionsList.querySelector('li'); if(f) f.click(); }
+        });
+      }
+
+      clearBtn.addEventListener('click', function(e){ e.stopPropagation(); clearSelection(); });
+
+      document.addEventListener('mousedown', function(e){
+        var w=document.getElementById('clientSearchWrapper');
+        if (w && !w.contains(e.target)) closeDropdown();
+      });
+      document.addEventListener('touchstart', function(e){
+        var w=document.getElementById('clientSearchWrapper');
+        if (w && !w.contains(e.target)) closeDropdown();
+      },{passive:true});
+    }
+
+    if (document.readyState==='loading'){
+      document.addEventListener('DOMContentLoaded', initClientSearch);
+    } else {
+      initClientSearch();
+    }
+  })();
   </script>
 
 </body>
