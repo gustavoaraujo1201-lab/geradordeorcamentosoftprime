@@ -49,10 +49,10 @@ let store = { issuers: [], clients: [], quotes: [] };
 
 // ========== QUOTE NUMBER HELPERS ==========
 function computeNextQuoteNumberForIssuer(issuerId, clientId){
-  // Conta quantos orçamentos já existem para esse emissor+cliente
-  // Assim cada cliente tem sua própria sequência independente: 0001, 0002, 0003...
+  // SEMPRE exige os dois — emissor E cliente — para calcular a sequência correta
+  if (!issuerId || !clientId) return 1;
   const filtered = (store.quotes||[]).filter(q =>
-    q.issuerId === issuerId && (clientId ? q.clientId === clientId : true)
+    q.issuerId === issuerId && q.clientId === clientId
   );
   return filtered.length + 1;
 }
@@ -496,8 +496,13 @@ function setDefaultQuoteFields(){
   if (!quoteNumber || !quoteDate || editingQuoteId) return;
   const issuerId = selectIssuer ? selectIssuer.value : null;
   const clientId = selectClient ? selectClient.value : null;
-  const n = issuerId ? computeNextQuoteNumberForIssuer(issuerId, clientId) : 1;
-  quoteNumber.value = formatQuoteNumber(n);
+  // Só calcula o número quando AMBOS estão selecionados
+  if (issuerId && clientId) {
+    const n = computeNextQuoteNumberForIssuer(issuerId, clientId);
+    quoteNumber.value = formatQuoteNumber(n);
+  } else {
+    quoteNumber.value = '';
+  }
   quoteDate.value = new Date().toISOString().slice(0,10);
   if (notes) notes.value = "";
 }
@@ -712,6 +717,10 @@ if (addItemBtn){
 if (selectIssuer){
   selectIssuer.addEventListener('change', ()=>{ if (!editingQuoteId) setDefaultQuoteFields(); });
 }
+// Atualiza número também quando o cliente muda
+if (selectClient){
+  selectClient.addEventListener('change', ()=>{ if (!editingQuoteId) setDefaultQuoteFields(); });
+}
 
 if (saveQuoteBtn){
   saveQuoteBtn.addEventListener("click", async ()=>{
@@ -729,8 +738,8 @@ if (saveQuoteBtn){
       if (!validItems.length){ showNotification("Adicione pelo menos um item com descrição","error"); return; }
 
       const totals = recalcTotals();
-      let numeroValue = (quoteNumber&&quoteNumber.value||"").trim();
-      if (!numeroValue) numeroValue = formatQuoteNumber(computeNextQuoteNumberForIssuer(issuerId, clientId));
+      // Sempre recalcula o número na hora de salvar — garante sequência correta
+      const numeroValue = formatQuoteNumber(computeNextQuoteNumberForIssuer(issuerId, clientId));
       const notesVal = (notes&&notes.value||"").trim();
 
       if (editingQuoteId){
