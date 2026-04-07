@@ -650,6 +650,15 @@
       const setStroke= h => { const [r,g,b]=hex2rgb(h); pdf.setDrawColor(r,g,b); };
       const setTxt   = h => { const [r,g,b]=hex2rgb(h); pdf.setTextColor(r,g,b); };
       const mf       = v  => Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+      // Valor unitário: até 6 casas decimais, remove zeros à direita (mín. 2)
+      const mfDocUnit = v => {
+        const n = Number(v||0);
+        let s = n.toFixed(6).replace(/(\.[0-9]*[1-9])0+$/, '$1');
+        if (/\.[0-9]$/.test(s)) s += '0';
+        s = s.replace(/\.0{2,}$/, '.00');
+        const [int, dec] = s.split('.');
+        return int.replace(/\B(?=(\d{3})+(?!\d))/g,'.') + ',' + dec;
+      };
       const cleanStr = s  => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'');  // remove acentos p/ jsPDF
 
       // ── Título ORÇAMENTO ─────────────────────────────────────────────────────
@@ -758,7 +767,7 @@
         pdf.setFont('helvetica','normal'); pdf.setFontSize(9); setTxt('#1a1a1a');
         pdf.text(descLines,                                            xDesc  + 3,           y + 5);
         pdf.text(String(it.quantidade||0),                             xQtd   + colQtd/2,    y + 5, {align:'center'});
-        pdf.text('R$ ' + mf(it.valorUnitario),                         xVUnit + colVUnit - 3, y + 5, {align:'right'});
+        pdf.text('R$ ' + mfDocUnit(it.valorUnitario),                         xVUnit + colVUnit - 3, y + 5, {align:'right'});
         pdf.setFont('helvetica','bold');
         pdf.text('R$ ' + mf((it.quantidade||0)*(it.valorUnitario||0)), xTot   + colTot  - 3, y + 5, {align:'right'});
         y += cellH;

@@ -25,6 +25,22 @@ function uid(){
   });
 }
 const money = v => Number(v||0).toFixed(2);
+// Formata valor unitário: até 6 casas decimais, remove zeros à direita (mín. 2)
+function moneyUnit(v){
+  const n = Number(v||0);
+  // Usa 6 casas e remove zeros à direita, garantindo pelo menos 2
+  let s = n.toFixed(6).replace(/(\.\d*[1-9])0+$/, '$1').replace(/\.00$/, '.00');
+  // Se ficou com apenas 1 casa depois da vírgula, garante 2
+  if (/\.\d$/.test(s)) s += '0';
+  return s;
+}
+// Formata valor monetário BR: vírgula decimal, ponto milhar
+const mfUnit = v => {
+  const s = moneyUnit(v);
+  const [int, dec] = s.split('.');
+  const intFmt = int.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return intFmt + ',' + dec;
+};
 
 function escapeHtml(str){
   if (str === null || str === undefined) return "";
@@ -447,7 +463,7 @@ function renderItems(items=[]){
     tr.innerHTML = `
       <td><input data-idx="${idx}" data-field="descricao" value="${escapeHtml(it.descricao||'')}" placeholder="Descrição do item" /></td>
       <td><input data-idx="${idx}" data-field="quantidade" type="number" min="0" step="1" value="${it.quantidade||1}" /></td>
-      <td><input data-idx="${idx}" data-field="valorUnitario" type="number" min="0" step="0.01" value="${it.valorUnitario||0}" /></td>
+      <td><input data-idx="${idx}" data-field="valorUnitario" type="number" min="0" step="0.000001" value="${it.valorUnitario||0}" /></td>
       <td class="item-total">R$ ${money((it.quantidade||1)*(it.valorUnitario||0))}</td>
       <td><button class="del-item" data-idx="${idx}">×</button></td>`;
     itemsBody.appendChild(tr);
@@ -902,6 +918,12 @@ if (backupBtn) {
 
 // ========== HELPERS DE FORMATAÇÃO ==========
 const mf = v => parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+// Formata valor unitário para documentos (PDF/Word/Excel): até 6 casas, remove zeros
+const mfDocUnit = v => {
+  const s = moneyUnit(v);
+  const [int, dec] = s.split('.');
+  return int.replace(/\B(?=(\d{3})+(?!\d))/g,'.') + ',' + dec;
+};
 
 // ========== MARCA D'ÁGUA ==========
 // Retorna HTML de marca d'água se o plano não for premium
@@ -1017,7 +1039,7 @@ function buildPdfClassico(q, issuer, client) {
     <tr>
       <td style="border:1px solid #d1d5db;padding:9px 10px;font-size:11pt;">${escapeHtml(it.descricao||'')}</td>
       <td style="border:1px solid #d1d5db;padding:9px 10px;text-align:center;font-size:11pt;">${it.quantidade}</td>
-      <td style="border:1px solid #d1d5db;padding:9px 10px;text-align:right;font-size:11pt;">R$ ${mf(it.valorUnitario)}</td>
+      <td style="border:1px solid #d1d5db;padding:9px 10px;text-align:right;font-size:11pt;">R$ ${mfDocUnit(it.valorUnitario)}</td>
       <td style="border:1px solid #d1d5db;padding:9px 10px;text-align:right;font-size:11pt;font-weight:bold;">R$ ${mf((it.quantidade||0)*(it.valorUnitario||0))}</td>
     </tr>`).join('');
   const notesHtml = q.notes ? `<div style="margin-top:18px;padding:12px;background:#fffbeb;border-left:3px solid #f59e0b;border-radius:4px;"><strong>Observações:</strong><br/>${escapeHtml(q.notes).replace(/\n/g,'<br/>')}</div>` : '';
@@ -1102,7 +1124,7 @@ function buildPdfModerno(q, issuer, client) {
     <tr style="background:${idx%2===0?'#fff':'#f0f7ff'};">
       <td style="border:1px solid #dbeafe;padding:10px 12px;font-size:11pt;">${escapeHtml(it.descricao||'')}</td>
       <td style="border:1px solid #dbeafe;padding:10px 12px;text-align:center;font-size:11pt;">${it.quantidade}</td>
-      <td style="border:1px solid #dbeafe;padding:10px 12px;text-align:right;font-size:11pt;">R$ ${mf(it.valorUnitario)}</td>
+      <td style="border:1px solid #dbeafe;padding:10px 12px;text-align:right;font-size:11pt;">R$ ${mfDocUnit(it.valorUnitario)}</td>
       <td style="border:1px solid #dbeafe;padding:10px 12px;text-align:right;font-size:11pt;font-weight:bold;color:#0d7de0;">R$ ${mf((it.quantidade||0)*(it.valorUnitario||0))}</td>
     </tr>`).join('');
   const notesHtml = q.notes ? `<div style="margin-top:18px;padding:14px;background:#fffbeb;border-left:4px solid #f59e0b;border-radius:6px;font-size:10pt;"><strong>Observações:</strong><br/>${escapeHtml(q.notes).replace(/\n/g,'<br/>')}</div>` : '';
@@ -1197,7 +1219,7 @@ function buildPdfMinimalista(q, issuer, client) {
     <tr>
       <td style="padding:12px 0;border-bottom:1px solid #f3f4f6;font-size:11pt;">${escapeHtml(it.descricao||'')}</td>
       <td style="padding:12px 0;border-bottom:1px solid #f3f4f6;text-align:center;font-size:11pt;color:#6b7280;">${it.quantidade}</td>
-      <td style="padding:12px 0;border-bottom:1px solid #f3f4f6;text-align:right;font-size:11pt;color:#6b7280;">R$ ${mf(it.valorUnitario)}</td>
+      <td style="padding:12px 0;border-bottom:1px solid #f3f4f6;text-align:right;font-size:11pt;color:#6b7280;">R$ ${mfDocUnit(it.valorUnitario)}</td>
       <td style="padding:12px 0;border-bottom:1px solid #f3f4f6;text-align:right;font-size:11pt;font-weight:700;">R$ ${mf((it.quantidade||0)*(it.valorUnitario||0))}</td>
     </tr>`).join('');
   const notesHtml = q.notes ? `<div style="margin-top:20px;padding:14px 0;border-top:1px solid #f3f4f6;font-size:10pt;color:#6b7280;"><strong style="color:#1a1a1a;">Observações:</strong><br/>${escapeHtml(q.notes).replace(/\n/g,'<br/>')}</div>` : '';
@@ -1343,7 +1365,7 @@ function exportQuoteDoc(quoteId) {
       <tr>
         <td style="border:1px solid #ccc;padding:8px 10px;">${escapeHtml(it.descricao||'')}</td>
         <td style="border:1px solid #ccc;padding:8px 10px;text-align:center;">${it.quantidade}</td>
-        <td style="border:1px solid #ccc;padding:8px 10px;text-align:right;">R$ ${mf(it.valorUnitario)}</td>
+        <td style="border:1px solid #ccc;padding:8px 10px;text-align:right;">R$ ${mfDocUnit(it.valorUnitario)}</td>
         <td style="border:1px solid #ccc;padding:8px 10px;text-align:right;font-weight:bold;">R$ ${mf((it.quantidade||0)*(it.valorUnitario||0))}</td>
       </tr>`).join('');
     const notesHtml = q.notes ? `<p style="margin-top:20px;padding:10px;background:#fffbeb;border-left:3px solid #f59e0b;"><strong>Observações:</strong><br/>${escapeHtml(q.notes).replace(/\n/g,'<br/>')}</p>` : '';
@@ -1631,7 +1653,7 @@ function renderQuoteHtml(q, issuer, client){
     <tr>
       <td style="padding:10px 8px;border:1px solid #d1d5db;word-break:break-word;font-size:13px;">${escapeHtml(it.descricao||'')}</td>
       <td style="padding:10px 8px;border:1px solid #d1d5db;text-align:center;white-space:nowrap;font-size:13px;">${it.quantidade}</td>
-      <td style="padding:10px 8px;border:1px solid #d1d5db;text-align:right;white-space:nowrap;font-size:13px;">R$ ${money(it.valorUnitario)}</td>
+      <td style="padding:10px 8px;border:1px solid #d1d5db;text-align:right;white-space:nowrap;font-size:13px;">R$ ${mfUnit(it.valorUnitario)}</td>
       <td style="padding:10px 8px;border:1px solid #d1d5db;text-align:right;white-space:nowrap;font-size:13px;font-weight:700;">R$ ${money((it.quantidade||0)*(it.valorUnitario||0))}</td>
     </tr>`).join('');
   const notesHtml=q.notes?`
