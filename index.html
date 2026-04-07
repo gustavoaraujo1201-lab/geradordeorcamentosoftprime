@@ -187,7 +187,7 @@
       #sp-toast{bottom:80px!important;right:12px!important;left:12px!important;max-width:none!important;}
 
       /* ── Client search — mobile ── */
-      #clientSearchInput { font-size:16px!important; min-height:46px; }
+      #clientSearchInput { font-size:16px!important; min-height:46px; padding-left:14px!important; }
       #clientOptionsList li { min-height:52px; }
       #clientDropdown { border-radius:12px; }
     }
@@ -306,7 +306,6 @@
           <div style="position:relative;">
             <label for="clientSearchInput" style="display:block;margin-bottom:6px;font-weight:600;font-size:14px;color:#4b5563;">Cliente *</label>
             <div id="clientSearchWrapper" style="position:relative;">
-              <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none;z-index:2;color:#9ca3af;">🔍</span>
               <input
                 id="clientSearchInput"
                 type="text"
@@ -314,8 +313,8 @@
                 autocorrect="off"
                 autocapitalize="off"
                 spellcheck="false"
-                placeholder="Clique ou digite para buscar cliente..."
-                style="width:100%;padding:11px 36px 11px 34px;border-radius:7px;border:1.5px solid rgba(20,30,40,0.12);background:#fff;color:#1a1a1a;font-size:14px;font-family:inherit;transition:all 0.2s ease;"
+                placeholder="Digite o nome do cliente..."
+                style="width:100%;padding:11px 36px 11px 14px;border-radius:7px;border:1.5px solid rgba(20,30,40,0.12);background:#fff;color:#1a1a1a;font-size:14px;font-family:inherit;transition:all 0.2s ease;"
               />
               <span id="clientChevron" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:#9ca3af;transition:transform 0.22s;">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
