@@ -49,7 +49,6 @@ let store = { issuers: [], clients: [], quotes: [] };
 
 // ========== QUOTE NUMBER HELPERS ==========
 function computeNextQuoteNumberForIssuer(issuerId, clientId){
-  // Sequência independente por combinação emissor + cliente
   const filtered = (store.quotes||[]).filter(q =>
     q.issuerId === issuerId && (clientId ? q.clientId === clientId : true)
   );
@@ -657,6 +656,7 @@ if (clientForm){
       setLoading(false);
       clientForm.reset(); renderClients(); renderQuotes();
       showNotification("Cliente adicionado com sucesso!","success");
+      setTimeout(function(){ window.location.href = '/index'; }, 1200);
     } catch(err){ console.error("[ERROR] clientForm:",err); setLoading(false); showNotification("Erro ao salvar cliente","error"); }
   });
 }
@@ -767,7 +767,7 @@ if (saveQuoteBtn){
       currentItems=[{descricao:"",quantidade:1,valorUnitario:0}];
       renderItems(currentItems); renderQuotes(); setDefaultQuoteFields();
       showNotification(`✅ Orçamento ${q.numero} salvo com sucesso!`,"success");
-      setTimeout(()=>{ quotesList&&quotesList.scrollIntoView({behavior:'smooth',block:'start'}); }, 300);
+      setTimeout(()=>{ window.location.href = '/orcamentos_salvos'; }, 1200);
     } catch(err){ console.error("[ERROR] saveQuoteBtn:",err); setLoading(false); showNotification("Erro ao salvar orçamento","error"); }
   });
 }
