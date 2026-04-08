@@ -1339,25 +1339,38 @@ function generatePDFFromQuote(quoteId, modelo) {
     else if (modelo === 'minimalista') fullDoc = buildPdfMinimalista(q, issuer, client);
     else                               fullDoc = buildPdfClassico(q, issuer, client);
 
-    // Impressão via iframe oculto
-    let iframe = document.getElementById('_softprime_pdf_frame');
-    if (!iframe) {
-      iframe = document.createElement('iframe');
-      iframe.id = '_softprime_pdf_frame';
-      iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;visibility:hidden;';
-      document.body.appendChild(iframe);
-    }
-    const iDoc = iframe.contentWindow.document;
-    iDoc.open(); iDoc.write(fullDoc); iDoc.close();
-    const pending = Array.from(iDoc.images).filter(i => !i.complete);
-    const doPrint = () => { iframe.contentWindow.focus(); iframe.contentWindow.print(); };
-    if (!pending.length) { setTimeout(doPrint, 400); }
-    else {
-      let done = 0;
-      pending.forEach(img => {
-        img.addEventListener('load',  () => { done++; if (done === pending.length) setTimeout(doPrint, 300); });
-        img.addEventListener('error', () => { done++; if (done === pending.length) setTimeout(doPrint, 300); });
-      });
+    // Detecta mobile (iOS/Android)
+    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      // No mobile o iframe oculto não dispara print — abre nova aba com autoprint
+      const htmlWithPrint = fullDoc.replace('</body>', '<script>window.onload=function(){setTimeout(function(){window.print();},600);};<\/script></body>');
+      const blob = new Blob([htmlWithPrint], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const tab = window.open(url, '_blank');
+      if (!tab) { showNotification('Permita pop-ups para gerar o PDF', 'error'); }
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } else {
+      // Desktop: iframe oculto
+      let iframe = document.getElementById('_softprime_pdf_frame');
+      if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.id = '_softprime_pdf_frame';
+        iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;visibility:hidden;';
+        document.body.appendChild(iframe);
+      }
+      const iDoc = iframe.contentWindow.document;
+      iDoc.open(); iDoc.write(fullDoc); iDoc.close();
+      const pending = Array.from(iDoc.images).filter(i => !i.complete);
+      const doPrint = () => { iframe.contentWindow.focus(); iframe.contentWindow.print(); };
+      if (!pending.length) { setTimeout(doPrint, 400); }
+      else {
+        let done = 0;
+        pending.forEach(img => {
+          img.addEventListener('load',  () => { done++; if (done === pending.length) setTimeout(doPrint, 300); });
+          img.addEventListener('error', () => { done++; if (done === pending.length) setTimeout(doPrint, 300); });
+        });
+      }
     }
   } catch(err) { console.error('[ERROR] generatePDFFromQuote:', err); showNotification('Erro ao gerar PDF','error'); }
 }
