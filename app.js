@@ -24,17 +24,34 @@ function uid(){
     return (c==='x' ? r : (r&0x3|0x8)).toString(16);
   });
 }
-const money = v => Number(v||0).toFixed(2);
-// Formata valor unitário: até 6 casas decimais, remove zeros à direita (mín. 2)
-function moneyUnit(v){
-  const n = Number(v||0);
-  // Usa 6 casas e remove zeros à direita, garantindo pelo menos 2
-  let s = n.toFixed(6).replace(/(\.\d*[1-9])0+$/, '$1').replace(/\.00$/, '.00');
-  // Se ficou com apenas 1 casa depois da vírgula, garante 2
-  if (/\.\d$/.test(s)) s += '0';
+// Formatação inteligente de decimais:
+// - Número redondo (ex: 90.00)  → "90,00"     (sempre mín. 2 casas)
+// - Número quebrado (ex: 4.019665) → "4,019665" (remove zeros à direita, mín. 2 casas)
+// maxDec: máximo de casas decimais a considerar (padrão 6 para unitários, 2 para totais)
+function smartDecimal(v, maxDec) {
+  maxDec = maxDec || 6;
+  const n = Number(v || 0);
+  let s = n.toFixed(maxDec);
+  // Remove zeros finais apos a virgula, garantindo sempre minimo 2 casas decimais
+  // Ex: '90.000000' -> '90.00' | '2.479800' -> '2.4798' | '4.019665' -> '4.019665'
+  s = s.replace(/(\.\d\d[1-9]*)0+$/, '$1');
   return s;
 }
-// Formata valor monetário BR: vírgula decimal, ponto milhar
+
+// Formata total/subtotal — máximo 2 casas (número redondo fica "90,00")
+const money = v => {
+  const s = smartDecimal(v, 2);
+  const [int, dec] = s.split('.');
+  const intFmt = int.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return intFmt + ',' + dec;
+};
+
+// Formata valor unitário — até 6 casas, remove zeros desnecessários
+function moneyUnit(v) {
+  return smartDecimal(v, 6);
+}
+
+// Formata valor unitário BR: vírgula decimal, ponto milhar
 const mfUnit = v => {
   const s = moneyUnit(v);
   const [int, dec] = s.split('.');
