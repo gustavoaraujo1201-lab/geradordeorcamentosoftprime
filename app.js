@@ -32,8 +32,6 @@ function smartDecimal(v, maxDec) {
   maxDec = maxDec || 6;
   const n = Number(v || 0);
   let s = n.toFixed(maxDec);
-  // Remove zeros finais apos a virgula, garantindo sempre minimo 2 casas decimais
-  // Ex: '90.000000' -> '90.00' | '2.479800' -> '2.4798' | '4.019665' -> '4.019665'
   s = s.replace(/(\.\d\d[1-9]*)0+$/, '$1');
   return s;
 }
@@ -97,7 +95,6 @@ function formatQuoteNumber(n){
 
 // ========== NOTIFICATION ==========
 function showNotification(message, type='success'){
-  // Toast não-bloqueante — funciona em mobile e não interrompe o fluxo
   const prev = document.getElementById('sp-toast');
   if (prev) prev.remove();
   const colors = { success:'#16a34a', error:'#dc2626', info:'#0d7de0' };
@@ -144,8 +141,15 @@ async function dbLoadIssuers(){
 async function dbSaveIssuer(issuer){
   const sb = getSupabase(); const userId = getUserId();
   if (!sb || !userId) return null;
-  const row = { id: issuer.id, user_id: userId, name: issuer.name, cnpj_cpf: issuer.cnpjCpf||'',
-    address: issuer.address||'', phone: issuer.phone||'', logo: issuer.logo||null };
+  const row = {
+    id: issuer.id,
+    user_id: userId,           // ← sincronização web/mobile
+    name: issuer.name,
+    cnpj_cpf: issuer.cnpjCpf||'',
+    address: issuer.address||'',
+    phone: issuer.phone||'',
+    logo: issuer.logo||null
+  };
   const { data, error } = await sb.from('issuers').upsert(row, { onConflict: 'id' }).select().single();
   if (error){ console.error('dbSaveIssuer:', error); return null; }
   return data;
@@ -170,8 +174,14 @@ async function dbLoadClients(){
 async function dbSaveClient(client){
   const sb = getSupabase(); const userId = getUserId();
   if (!sb || !userId) return null;
-  const row = { id: client.id, user_id: userId, name: client.name, cnpj_cpf: client.cnpjCpf||'',
-    address: client.address||'', phone: client.phone||'' };
+  const row = {
+    id: client.id,
+    user_id: userId,           // ← sincronização web/mobile
+    name: client.name,
+    cnpj_cpf: client.cnpjCpf||'',
+    address: client.address||'',
+    phone: client.phone||''
+  };
   const { data, error } = await sb.from('clients').upsert(row, { onConflict: 'id' }).select().single();
   if (error){ console.error('dbSaveClient:', error); return null; }
   return data;
@@ -191,6 +201,7 @@ async function dbLoadQuotes(){
   return (data||[]).map(r => ({
     id: r.id, issuerId: r.issuer_id||'', clientId: r.client_id||'',
     numero: r.numero||'', items: r.items||[], subtotal: Number(r.subtotal||0),
+    impostos: Number(r.impostos||0), desconto: Number(r.desconto||0),
     total: Number(r.total||0), notes: r.notes||'', createdAt: r.created_at, updatedAt: r.updated_at
   }));
 }
@@ -198,11 +209,19 @@ async function dbSaveQuote(q){
   const sb = getSupabase(); const userId = getUserId();
   if (!sb || !userId) return null;
   const row = {
-    id: q.id, user_id: userId, issuer_id: q.issuerId||null, client_id: q.clientId||null,
-    numero: q.numero||null, items: q.items||[], subtotal: q.subtotal||0, total: q.total||0,
+    id: q.id,
+    user_id: userId,           // ← sincronização web/mobile
+    issuer_id: q.issuerId||null,
+    client_id: q.clientId||null,
+    numero: q.numero||null,
+    items: q.items||[],
+    subtotal: q.subtotal||0,
+    impostos: q.impostos||0,   // ← campo compatível com mobile
+    desconto: q.desconto||0,   // ← campo compatível com mobile
+    total: q.total||0,
     notes: q.notes||null,
     created_at: q.createdAt || new Date().toISOString(),
-    updated_at: q.updatedAt || new Date().toISOString()
+    updated_at: new Date().toISOString()
   };
   const { data, error } = await sb.from('quotes').upsert(row, { onConflict: 'id' }).select().single();
   if (error){ console.error('dbSaveQuote:', error); return null; }
@@ -216,7 +235,7 @@ async function dbDeleteQuote(id){
 
 // ========== MIGRATION: localStorage → Supabase ==========
 async function migrateLocalStorageToSupabase(){
-  if (localStorage.getItem(MIGRATION_KEY) === '1') return; // já migrou
+  if (localStorage.getItem(MIGRATION_KEY) === '1') return;
   const raw = localStorage.getItem(STORE_KEY);
   if (!raw) { localStorage.setItem(MIGRATION_KEY,'1'); return; }
 
@@ -234,17 +253,14 @@ async function migrateLocalStorageToSupabase(){
   console.log(`🔄 Migrando: ${issuers.length} emissores, ${clients.length} clientes, ${quotes.length} orçamentos`);
   showNotification('🔄 Migrando seus dados para a nuvem... Aguarde.', 'info');
 
-  // Migrar emissores
   for (const iss of issuers){
     if (!iss.id) iss.id = uid();
     await dbSaveIssuer(iss);
   }
-  // Migrar clientes
   for (const cli of clients){
     if (!cli.id) cli.id = uid();
     await dbSaveClient(cli);
   }
-  // Migrar orçamentos
   for (const q of quotes){
     if (!q.id) q.id = uid();
     await dbSaveQuote(q);
@@ -322,7 +338,7 @@ const closePreview     = document.getElementById("closePreview");
 const printBtn         = document.getElementById("printBtn");
 
 let currentItems = [{descricao:"",quantidade:1,valorUnitario:0}];
-let _appInitialized = false; // guard contra dupla inicialização
+let _appInitialized = false;
 window._appInitialized = false;
 let editingQuoteId   = null;
 let editingIssuerId  = null;
@@ -333,82 +349,101 @@ let currentIssuerLogoDataUrl = null;
 let searchQuery = '';
 
 // ========== FILTER ==========
-function filterQuotes(quotes){
-  if (!searchQuery) return quotes;
-  const q = normalizeStr(searchQuery);
-  return quotes.filter(quote => {
-    const issuer = store.issuers.find(i => i.id === quote.issuerId) || {};
-    const client = store.clients.find(c => c.id === quote.clientId) || {};
-    const fields = [quote.numero||'', issuer.name||'', client.name||'',
-      formatDateISOtoLocal(quote.createdAt), money(quote.total)];
-    return fields.some(f => normalizeStr(f).includes(q));
-  });
+function normalizeForSearch(str){
+  return String(str||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 }
 
 function highlightText(text, query){
   if (!query) return escapeHtml(text);
-  const norm = normalizeStr(text);
-  const idx = norm.indexOf(normalizeStr(query));
-  if (idx === -1) return escapeHtml(text);
-  return escapeHtml(text.slice(0,idx))
-    + '<mark class="search-highlight">' + escapeHtml(text.slice(idx, idx+query.length)) + '</mark>'
-    + escapeHtml(text.slice(idx+query.length));
+  const escaped = escapeHtml(text);
+  const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(${escapedQuery})`, 'gi');
+  return escaped.replace(regex, '<mark class="search-highlight">$1</mark>');
 }
 
-// ========== RENDER FUNCTIONS ==========
-function renderIssuers(){
-  if (!selectIssuer) return;
-  if (issuerList) issuerList.innerHTML = "";
-  selectIssuer.innerHTML = "<option value=''>-- selecione o emissor --</option>";
-
-  (store.issuers||[]).forEach(i => {
-    if (issuerList){
-      const li = document.createElement("li");
-      li.innerHTML = `
-        <div>
-          ${i.logo ? `<img src="${i.logo}" alt="Logo" style="max-height:40px;max-width:100px;margin-bottom:6px;border-radius:4px;" />` : ''}
-          <strong>${escapeHtml(i.name)}</strong>
-          <div class="meta">${escapeHtml(i.cnpjCpf||'')} ${i.phone ? '• ' + escapeHtml(i.phone) : ''}</div>
-          <div class="meta">${escapeHtml(i.address||'')}</div>
-        </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          <button class="btn btn-outline edit-issuer" data-id="${i.id}">✏️ Editar</button>
-          <button class="btn btn-outline del-issuer" data-id="${i.id}" style="color:#dc2626;border-color:#fecaca;">🗑️ Excluir</button>
-        </div>`;
-      issuerList.appendChild(li);
-    }
-    const opt = document.createElement("option");
-    opt.value = i.id;
-    opt.textContent = `${i.name} ${i.cnpjCpf ? '— ' + i.cnpjCpf : ''}`;
-    selectIssuer.appendChild(opt);
+function filterQuotes(quotes){
+  if (!searchQuery) return quotes;
+  const q = normalizeForSearch(searchQuery);
+  return quotes.filter(quote => {
+    const issuer = store.issuers.find(i=>i.id===quote.issuerId)||{};
+    const client = store.clients.find(c=>c.id===quote.clientId)||{};
+    return (
+      normalizeForSearch(quote.numero).includes(q) ||
+      normalizeForSearch(issuer.name).includes(q) ||
+      normalizeForSearch(client.name).includes(q) ||
+      normalizeForSearch(quote.notes).includes(q)
+    );
   });
+}
+
+// ========== RENDER ==========
+function renderIssuers(){
+  if (!issuerList) return;
+  issuerList.innerHTML = "";
+  if (!store.issuers.length){
+    issuerList.innerHTML = "<li style='color:#9ca3af;text-align:center;'>Nenhum emissor cadastrado</li>";
+    return;
+  }
+  store.issuers.forEach(it => {
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <div style="flex:1;">
+        <strong>${escapeHtml(it.name)}</strong>
+        ${it.cnpjCpf ? `<div class="meta">CNPJ/CPF: ${escapeHtml(it.cnpjCpf)}</div>` : ''}
+        ${it.phone   ? `<div class="meta">Tel: ${escapeHtml(it.phone)}</div>` : ''}
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-outline edit-issuer" data-id="${it.id}">✏️ Editar</button>
+        <button class="btn btn-outline del-issuer" data-id="${it.id}" style="color:#dc2626;border-color:#fecaca;">🗑️ Excluir</button>
+      </div>`;
+    issuerList.appendChild(li);
+  });
+
+  // Popula select de emissor no formulário de orçamento
+  if (selectIssuer){
+    const prev = selectIssuer.value;
+    selectIssuer.innerHTML = '<option value="">-- selecione o emissor --</option>';
+    store.issuers.forEach(it => {
+      const opt = document.createElement('option');
+      opt.value = it.id; opt.textContent = it.name;
+      selectIssuer.appendChild(opt);
+    });
+    if (prev) selectIssuer.value = prev;
+  }
 }
 
 function renderClients(){
-  if (!selectClient) return;
-  if (clientList) clientList.innerHTML = "";
-  selectClient.innerHTML = "<option value=''>-- selecione o cliente --</option>";
-
-  (store.clients||[]).forEach(c => {
-    if (clientList){
-      const li = document.createElement("li");
-      li.innerHTML = `
-        <div>
-          <strong>${escapeHtml(c.name)}</strong>
-          <div class="meta">${escapeHtml(c.cnpjCpf||'')} ${c.phone ? '• ' + escapeHtml(c.phone) : ''}</div>
-          <div class="meta">${escapeHtml(c.address||'')}</div>
-        </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          <button class="btn btn-outline edit-client" data-id="${c.id}">✏️ Editar</button>
-          <button class="btn btn-outline del-client" data-id="${c.id}" style="color:#dc2626;border-color:#fecaca;">🗑️ Excluir</button>
-        </div>`;
-      clientList.appendChild(li);
-    }
-    const opt = document.createElement("option");
-    opt.value = c.id;
-    opt.textContent = `${c.name} ${c.cnpjCpf ? '— ' + c.cnpjCpf : ''}`;
-    selectClient.appendChild(opt);
+  if (!clientList) return;
+  clientList.innerHTML = "";
+  if (!store.clients.length){
+    clientList.innerHTML = "<li style='color:#9ca3af;text-align:center;'>Nenhum cliente cadastrado</li>";
+    return;
+  }
+  store.clients.forEach(it => {
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <div style="flex:1;">
+        <strong>${escapeHtml(it.name)}</strong>
+        ${it.cnpjCpf ? `<div class="meta">CNPJ/CPF: ${escapeHtml(it.cnpjCpf)}</div>` : ''}
+        ${it.phone   ? `<div class="meta">Tel: ${escapeHtml(it.phone)}</div>` : ''}
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-outline edit-client" data-id="${it.id}">✏️ Editar</button>
+        <button class="btn btn-outline del-client" data-id="${it.id}" style="color:#dc2626;border-color:#fecaca;">🗑️ Excluir</button>
+      </div>`;
+    clientList.appendChild(li);
   });
+
+  if (selectClient){
+    const prev = selectClient.value;
+    selectClient.innerHTML = '<option value="">-- selecione o cliente --</option>';
+    store.clients.forEach(it => {
+      const opt = document.createElement('option');
+      opt.value = it.id; opt.textContent = it.name;
+      selectClient.appendChild(opt);
+    });
+    if (prev) selectClient.value = prev;
+  }
 }
 
 function renderQuotes(){
@@ -561,7 +596,6 @@ if (issuerForm){
       const newItem = { id: uid(), name, cnpjCpf, address, phone, logo: currentIssuerLogoDataUrl||null };
       setLoading(true);
       const savedIssuer = await dbSaveIssuer(newItem);
-      // Recarrega do banco para garantir dados corretos (inclusive IDs gerados pelo servidor)
       store.issuers = await dbLoadIssuers();
       setLoading(false);
       issuerForm.reset(); currentIssuerLogoDataUrl = null;
@@ -761,6 +795,8 @@ if (saveQuoteBtn){
         q.issuerId=issuerId; q.clientId=clientId; q.numero=numeroValue||null;
         q.items=JSON.parse(JSON.stringify(validItems));
         q.subtotal=totals.subtotal; q.total=totals.total; q.notes=notesVal;
+        q.impostos = q.impostos||0;
+        q.desconto  = q.desconto||0;
         if (quoteDate&&quoteDate.value) q.createdAt=new Date(quoteDate.value+'T12:00:00').toISOString();
         q.updatedAt=new Date().toISOString();
         setLoading(true);
@@ -775,7 +811,11 @@ if (saveQuoteBtn){
       const q = {
         id: uid(), issuerId, clientId, numero: numeroValue||null,
         items: JSON.parse(JSON.stringify(validItems)),
-        subtotal: totals.subtotal, total: totals.total, notes: notesVal,
+        subtotal: totals.subtotal,
+        impostos: 0,           // ← compatível com mobile
+        desconto: 0,           // ← compatível com mobile
+        total: totals.total,
+        notes: notesVal,
         createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
       };
       setLoading(true);
@@ -891,772 +931,31 @@ if (printBtn){
 // ========== CSV EXPORT ==========
 if (exportCsvBtn){
   exportCsvBtn.addEventListener("click",()=>{
-    // ── PAYWALL: Exportação CSV requer pelo menos plano Básico ──
     if (window.PaywallModal && !window.PaywallModal.hasAccess('export')) {
       window.PaywallModal.open('export');
       return;
     }
     if (!store.quotes.length){ showNotification("Nenhum orçamento para exportar","info"); return; }
-    const rows=[["Número","Emissor","CNPJ Emissor","Cliente","CNPJ Cliente","Data","Subtotal","Total","Observações"].map(h=>`"${h}"`).join(",")];
+    const rows=[["Número","Emissor","CNPJ Emissor","Cliente","CNPJ Cliente","Data","Subtotal","Impostos","Desconto","Total","Observações"].map(h=>`"${h}"`).join(",")];
     store.quotes.forEach(q=>{
       const iss=store.issuers.find(i=>i.id===q.issuerId)||{};
       const cli=store.clients.find(c=>c.id===q.clientId)||{};
-      rows.push([q.numero||"",iss.name||"",iss.cnpjCpf||"",cli.name||"",cli.cnpjCpf||"",
-        formatDateISOtoLocal(q.createdAt),money(q.subtotal||0),money(q.total||0),(q.notes||"").substring(0,100)
-      ].map(v=>`"${escapeCsv(v)}"`).join(","));
+      rows.push([
+        escapeCsv(q.numero||q.id), escapeCsv(iss.name||''), escapeCsv(iss.cnpjCpf||''),
+        escapeCsv(cli.name||''), escapeCsv(cli.cnpjCpf||''),
+        escapeCsv(formatDateISOtoLocal(q.createdAt)),
+        smartDecimal(q.subtotal,2), smartDecimal(q.impostos||0,2),
+        smartDecimal(q.desconto||0,2), smartDecimal(q.total,2),
+        escapeCsv(q.notes||'')
+      ].map((v,i)=>i<2||i===3?`"${v}"`:v).join(","));
     });
-    const blob=new Blob(["\uFEFF"+rows.join("\n")],{type:'text/csv;charset=utf-8;'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a'); a.href=url; a.download=`orcamentos_softprime_${new Date().toISOString().slice(0,10)}.csv`; a.click();
-    URL.revokeObjectURL(url);
-    showNotification("✅ CSV exportado com sucesso!","success");
+    const blob=new Blob(["\uFEFF"+rows.join("\n")],{type:'text/csv;charset=utf-8'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob); a.download='orcamentos_softprime.csv'; a.click();
   });
 }
 
-// ========== WORD EXPORT (preview) ==========
-if (exportDocBtn){
-  exportDocBtn.addEventListener("click",()=>{
-    if (window.PlanGuard && !window.PlanGuard.hasAccess('word')) {
-      window.PlanGuard.openPaywall('word');
-      return;
-    }
-    if (!currentPreviewQuoteId){ showNotification("Abra um orçamento primeiro (Visualizar/Imprimir) para exportar","info"); return; }
-    exportQuoteDoc(currentPreviewQuoteId);
-  });
-}
-
-// Botão de backup geral (procura elemento na página)
-const backupBtn = document.getElementById('backupBtn');
-if (backupBtn) {
-  backupBtn.addEventListener('click', () => exportBackupExcel());
-}
-
-// ========== WORD EXPORT (individual) ==========
-
-// ========== HELPERS DE FORMATAÇÃO ==========
-const mf = v => parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');
-// Formata valor unitário para documentos (PDF/Word/Excel): até 6 casas, remove zeros
-const mfDocUnit = v => {
-  const s = moneyUnit(v);
-  const [int, dec] = s.split('.');
-  return int.replace(/\B(?=(\d{3})+(?!\d))/g,'.') + ',' + dec;
-};
-
-// ========== MARCA D'ÁGUA ==========
-// Retorna HTML de marca d'água se o plano não for premium
-function getWatermarkHtml() {
-  const plan = window.PlanGuard ? window.PlanGuard.getActivePlan() : (localStorage.getItem('softprime_plan') || null);
-  const isPremium = plan === 'premium';
-  if (isPremium) return '';
-  return `
-    <div style="
-      position:fixed;top:50%;left:50%;
-      transform:translate(-50%,-50%) rotate(-35deg);
-      font-size:52px;font-weight:900;
-      color:rgba(13,125,224,0.07);
-      white-space:nowrap;pointer-events:none;
-      letter-spacing:6px;z-index:0;
-      font-family:Arial,sans-serif;
-    ">SOFTPRIME</div>`;
-}
-
-// ========== SELETOR DE MODELO DE PDF ==========
-function openPdfModelSelector(quoteId) {
-  const existing = document.getElementById('sp-pdf-model-modal');
-  if (existing) existing.remove();
-
-  const plan = window.PlanGuard ? window.PlanGuard.getActivePlan() : (localStorage.getItem('softprime_plan') || null);
-  const hasPro = ['pro','premium'].includes(plan) || plan === 'trial'; // trial tem acesso básico
-  // Só pro/premium tem múltiplos modelos
-  const hasMultiModel = ['pro','premium'].includes(plan);
-
-  const modal = document.createElement('div');
-  modal.id = 'sp-pdf-model-modal';
-  modal.style.cssText = [
-    'position:fixed','inset:0','z-index:99998',
-    'display:flex','align-items:center','justify-content:center',
-    'background:rgba(0,0,0,0.65)','backdrop-filter:blur(6px)','padding:20px'
-  ].join(';');
-
-  const models = [
-    {
-      id: 'classico',
-      icon: '📄',
-      name: 'Clássico',
-      desc: 'Layout limpo com logo e tabela organizada',
-      plan: 'Básico',
-      locked: false,
-    },
-    {
-      id: 'moderno',
-      icon: '🎨',
-      name: 'Moderno',
-      desc: 'Cabeçalho colorido azul com destaque profissional',
-      plan: 'Intermediário',
-      locked: !hasMultiModel,
-    },
-    {
-      id: 'minimalista',
-      icon: '✨',
-      name: 'Minimalista',
-      desc: 'Design clean sem bordas, elegante e sóbrio',
-      plan: 'Intermediário',
-      locked: !hasMultiModel,
-    },
-  ];
-
-  const cardsHtml = models.map(m => `
-    <div onclick="${m.locked ? `document.getElementById('sp-pdf-model-modal').remove();window.PlanGuard&&window.PlanGuard.openPaywall('pdf')` : `document.getElementById('sp-pdf-model-modal').remove();generatePDFFromQuote('${quoteId}','${m.id}')`}" style="
-      background:${m.locked ? 'rgba(255,255,255,0.03)' : 'rgba(13,125,224,0.08)'};
-      border:1px solid ${m.locked ? 'rgba(255,255,255,0.08)' : 'rgba(13,125,224,0.3)'};
-      border-radius:12px;padding:18px 16px;cursor:${m.locked ? 'not-allowed' : 'pointer'};
-      transition:all 0.2s;position:relative;opacity:${m.locked ? '0.55' : '1'};
-    " onmouseover="if(!${m.locked})this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-      ${m.locked ? `<div style="position:absolute;top:10px;right:10px;font-size:11px;background:rgba(99,102,241,0.2);color:#a5b4fc;padding:2px 8px;border-radius:100px;border:1px solid rgba(99,102,241,0.3);">🔒 ${m.plan}</div>` : ''}
-      <div style="font-size:28px;margin-bottom:8px;">${m.icon}</div>
-      <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:4px;">${m.name}</div>
-      <div style="font-size:12px;color:rgba(160,200,255,0.6);">${m.desc}</div>
-    </div>
-  `).join('');
-
-  modal.innerHTML = `
-    <div style="
-      background:#1a2332;border:1px solid rgba(13,125,224,0.2);
-      border-radius:16px;padding:32px 28px;max-width:500px;width:100%;
-      box-shadow:0 24px 60px rgba(0,0,0,0.5);
-      font-family:'Inter',Arial,sans-serif;color:#f0f6ff;
-    ">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-        <div>
-          <h3 style="margin:0 0 4px;font-size:18px;font-weight:700;color:#fff;">Escolha o modelo de PDF</h3>
-          <p style="margin:0;font-size:13px;color:rgba(160,200,255,0.55);">Selecione o layout do seu orçamento</p>
-        </div>
-        <button onclick="document.getElementById('sp-pdf-model-modal').remove()" style="
-          background:rgba(255,255,255,0.06);border:none;cursor:pointer;
-          color:rgba(255,255,255,0.4);font-size:20px;padding:6px 10px;
-          border-radius:8px;line-height:1;
-        ">×</button>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:8px;">
-        ${cardsHtml}
-      </div>
-    </div>
-  `;
-
-  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
-  document.body.appendChild(modal);
-}
-
-// ========== GERAÇÃO PDF — MODELO CLÁSSICO (melhorado) ==========
-function buildPdfClassico(q, issuer, client) {
-  const dateOnly = formatDateISOtoLocal(q.createdAt);
-  const logoHtml = issuer.logo ? `<div style="text-align:center;margin-bottom:16px;"><img src="${issuer.logo}" style="max-height:90px;max-width:240px;" /></div>` : '';
-  const watermark = getWatermarkHtml();
-  const itemRows = (q.items||[]).map(it => `
-    <tr>
-      <td style="border:1px solid #d1d5db;padding:9px 10px;font-size:11pt;">${escapeHtml(it.descricao||'')}</td>
-      <td style="border:1px solid #d1d5db;padding:9px 10px;text-align:center;font-size:11pt;">${it.quantidade}</td>
-      <td style="border:1px solid #d1d5db;padding:9px 10px;text-align:right;font-size:11pt;">R$ ${mfDocUnit(it.valorUnitario)}</td>
-      <td style="border:1px solid #d1d5db;padding:9px 10px;text-align:right;font-size:11pt;font-weight:bold;">R$ ${mf((it.quantidade||0)*(it.valorUnitario||0))}</td>
-    </tr>`).join('');
-  const notesHtml = q.notes ? `<div style="margin-top:18px;padding:12px;background:#fffbeb;border-left:3px solid #f59e0b;border-radius:4px;"><strong>Observações:</strong><br/>${escapeHtml(q.notes).replace(/\n/g,'<br/>')}</div>` : '';
-  const validadeHtml = q.validade ? `<div style="margin-bottom:6px;font-size:10pt;color:#6b7280;">Válido até: <strong>${escapeHtml(q.validade)}</strong></div>` : '';
-
-  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
-  <title>Orçamento ${escapeHtml(q.numero||q.id)}</title>
-  <style>
-    *{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
-    @page{margin:2cm;size:A4 portrait;}
-    body{font-family:Arial,Helvetica,sans-serif;font-size:11pt;color:#1a1a1a;margin:0 auto;padding:24px;max-width:780px;position:relative;}
-    .titulo{font-size:20pt;color:#0d7de0;text-align:center;font-weight:900;letter-spacing:3px;margin:6px 0 2px 0;}
-    .numero{font-size:12pt;text-align:center;color:#6b7280;margin:0 0 20px 0;}
-    .box{padding:12px 14px;border:1px solid #e0e0e0;background:#f9fafb;border-radius:6px;}
-    .label{font-size:9pt;color:#0d7de0;font-weight:bold;letter-spacing:1px;margin-bottom:5px;display:block;text-transform:uppercase;}
-    .name{font-size:13pt;font-weight:bold;margin-bottom:3px;display:block;}
-    .cnpj{font-size:9pt;color:#6b7280;margin:2px 0;display:block;}
-    .info{font-size:9pt;color:#555;margin:1px 0;display:block;}
-    table.layout{width:100%;border-collapse:collapse;margin-bottom:20px;}
-    table.items{width:100%;border-collapse:collapse;margin-top:12px;}
-    table.items th{background:#0d7de0;color:#fff;border:1px solid #0a5fb8;padding:9px 10px;font-size:10pt;font-weight:700;}
-    table.items td{border:1px solid #d1d5db;padding:9px 10px;font-size:10pt;}
-    table.items tr:nth-child(even) td{background:#f8fafc;}
-    .total-box{margin-top:14px;padding:12px 16px;background:#eef6ff;border:2px solid #93c5fd;border-radius:6px;display:flex;justify-content:space-between;align-items:center;}
-    .total-label{font-weight:700;color:#0d7de0;font-size:12pt;}
-    .total-value{font-weight:900;color:#0d7de0;font-size:15pt;}
-    .sig-block{text-align:center;margin-top:120px;margin-bottom:30px;}
-    .footer{position:fixed;bottom:0;left:0;right:0;text-align:center;font-size:9pt;color:#9ca3af;padding:5px 0;border-top:1px solid #e5e7eb;background:#fff;}
-    body{padding-bottom:30px;}
-    @media print{body{padding:0;} .footer{position:fixed;bottom:0;left:0;right:0;}}
-  </style></head><body>
-  ${watermark}
-  ${logoHtml}
-  <div class="titulo">ORÇAMENTO</div>
-  <div class="numero">${escapeHtml(q.numero||q.id)}</div>
-  ${validadeHtml}
-  <table class="layout" cellspacing="0" cellpadding="0"><tr>
-    <td style="width:49%;vertical-align:top;" class="box">
-      <span class="label">Emissor</span>
-      <span class="name">${escapeHtml(issuer.name||'—')}</span>
-      ${issuer.cnpjCpf?`<span class="cnpj">CNPJ/CPF: ${escapeHtml(issuer.cnpjCpf)}</span>`:''}
-      ${issuer.address?`<span class="info">${escapeHtml(issuer.address)}</span>`:''}
-      ${issuer.phone?`<span class="info">Tel: ${escapeHtml(issuer.phone)}</span>`:''}
-    </td>
-    <td style="width:2%;"></td>
-    <td style="width:49%;vertical-align:top;" class="box">
-      <span class="label">Destinatário</span>
-      <span class="name">${escapeHtml(client.name||'—')}</span>
-      ${client.cnpjCpf?`<span class="cnpj">CNPJ/CPF: ${escapeHtml(client.cnpjCpf)}</span>`:''}
-      ${client.address?`<span class="info">${escapeHtml(client.address)}</span>`:''}
-      ${client.phone?`<span class="info">Tel: ${escapeHtml(client.phone)}</span>`:''}
-    </td>
-  </tr></table>
-  <table class="items" cellspacing="0" cellpadding="0">
-    <thead><tr>
-      <th style="text-align:left;width:55%;">Descrição</th>
-      <th style="text-align:center;width:10%;">Qtd</th>
-      <th style="text-align:right;width:17%;">Valor Unit.</th>
-      <th style="text-align:right;width:18%;">Total</th>
-    </tr></thead>
-    <tbody>${itemRows}</tbody>
-  </table>
-  <table style="width:100%;border-collapse:collapse;margin-top:14px;" cellspacing="0" cellpadding="0"><tr>
-    <td style="padding:12px 16px;text-align:right;font-weight:700;font-size:12pt;color:#0d7de0;background:#eef6ff;border:2px solid #93c5fd;">TOTAL:</td>
-    <td style="padding:12px 16px;text-align:right;font-weight:900;font-size:15pt;color:#0d7de0;background:#eef6ff;border:2px solid #93c5fd;white-space:nowrap;width:22%;">R$ ${mf(q.total||0)}</td>
-  </tr></table>
-  ${notesHtml}
-  <div class="sig-block">
-    <div style="width:55%;border-top:1.5px solid #1a1a1a;margin:0 auto;"></div>
-    <div style="font-weight:700;font-size:11pt;margin-top:8px;">${escapeHtml(issuer.name||'')}</div>
-  </div>
-  <div class="footer">Orçamento gerado em: ${dateOnly} • SoftPrime</div>
-</body></html>`;
-}
-
-// ========== GERAÇÃO PDF — MODELO MODERNO ==========
-function buildPdfModerno(q, issuer, client) {
-  const dateOnly = formatDateISOtoLocal(q.createdAt);
-  const logoHtml = issuer.logo ? `<img src="${issuer.logo}" style="max-height:70px;max-width:200px;object-fit:contain;" />` : `<span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:1px;">${escapeHtml(issuer.name||'')}</span>`;
-  const watermark = getWatermarkHtml();
-  const itemRows = (q.items||[]).map((it,idx) => `
-    <tr style="background:${idx%2===0?'#fff':'#f0f7ff'};">
-      <td style="border:1px solid #dbeafe;padding:10px 12px;font-size:11pt;">${escapeHtml(it.descricao||'')}</td>
-      <td style="border:1px solid #dbeafe;padding:10px 12px;text-align:center;font-size:11pt;">${it.quantidade}</td>
-      <td style="border:1px solid #dbeafe;padding:10px 12px;text-align:right;font-size:11pt;">R$ ${mfDocUnit(it.valorUnitario)}</td>
-      <td style="border:1px solid #dbeafe;padding:10px 12px;text-align:right;font-size:11pt;font-weight:bold;color:#0d7de0;">R$ ${mf((it.quantidade||0)*(it.valorUnitario||0))}</td>
-    </tr>`).join('');
-  const notesHtml = q.notes ? `<div style="margin-top:18px;padding:14px;background:#fffbeb;border-left:4px solid #f59e0b;border-radius:6px;font-size:10pt;"><strong>Observações:</strong><br/>${escapeHtml(q.notes).replace(/\n/g,'<br/>')}</div>` : '';
-  const validadeHtml = q.validade ? `<span style="font-size:10pt;color:rgba(255,255,255,0.75);">Válido até: <strong>${escapeHtml(q.validade)}</strong></span>` : '';
-
-  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
-  <title>Orçamento ${escapeHtml(q.numero||q.id)}</title>
-  <style>
-    *{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
-    @page{margin:0;size:A4 portrait;}
-    body{font-family:Arial,Helvetica,sans-serif;font-size:11pt;color:#1a1a1a;margin:0;padding:0;position:relative;}
-    .header{background:linear-gradient(135deg,#0d7de0,#0a5fb8);padding:28px 36px;display:flex;align-items:center;justify-content:space-between;}
-    .header-right{text-align:right;}
-    .orcamento-title{font-size:26pt;font-weight:900;color:#fff;letter-spacing:4px;margin-bottom:4px;}
-    .orcamento-num{font-size:12pt;color:rgba(255,255,255,0.8);}
-    .content{padding:28px 36px;}
-    .parties{display:flex;gap:16px;margin-bottom:24px;}
-    .party-box{flex:1;padding:14px 16px;background:#f0f7ff;border-radius:8px;border-left:4px solid #0d7de0;}
-    .party-label{font-size:9pt;color:#0d7de0;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
-    .party-name{font-size:13pt;font-weight:700;color:#1a1a1a;margin-bottom:4px;}
-    .party-info{font-size:9pt;color:#6b7280;line-height:1.6;}
-    table.items{width:100%;border-collapse:collapse;}
-    table.items th{background:#0d7de0;color:#fff;padding:11px 12px;font-size:10pt;font-weight:700;}
-    table.items td{padding:10px 12px;font-size:10pt;}
-    .total-row{background:#0d7de0;color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;border-radius:6px;margin-top:12px;}
-    .total-label{font-size:13pt;font-weight:700;}
-    .total-value{font-size:18pt;font-weight:900;}
-    .footer{position:fixed;bottom:0;left:0;right:0;background:#f8fafc;padding:5px 36px;text-align:center;font-size:9pt;color:#9ca3af;border-top:1px solid #e5e7eb;}
-    @media print{.footer{position:fixed;bottom:0;left:0;right:0;}}
-    @media print{@page{margin:0;}}
-  </style></head><body>
-  ${watermark}
-  <div class="header">
-    <div>${logoHtml}</div>
-    <div class="header-right">
-      <div class="orcamento-title">ORÇAMENTO</div>
-      <div class="orcamento-num">${escapeHtml(q.numero||q.id)}</div>
-      <div style="margin-top:6px;font-size:10pt;color:rgba(255,255,255,0.7);">${dateOnly}</div>
-      ${validadeHtml}
-    </div>
-  </div>
-  <div class="content">
-    <div class="parties">
-      <div class="party-box">
-        <div class="party-label">Emissor</div>
-        <div class="party-name">${escapeHtml(issuer.name||'—')}</div>
-        <div class="party-info">
-          ${issuer.cnpjCpf?`CNPJ/CPF: ${escapeHtml(issuer.cnpjCpf)}<br/>`:''}
-          ${issuer.address?`${escapeHtml(issuer.address)}<br/>`:''}
-          ${issuer.phone?`Tel: ${escapeHtml(issuer.phone)}`:''}
-        </div>
-      </div>
-      <div class="party-box">
-        <div class="party-label">Destinatário</div>
-        <div class="party-name">${escapeHtml(client.name||'—')}</div>
-        <div class="party-info">
-          ${client.cnpjCpf?`CNPJ/CPF: ${escapeHtml(client.cnpjCpf)}<br/>`:''}
-          ${client.address?`${escapeHtml(client.address)}<br/>`:''}
-          ${client.phone?`Tel: ${escapeHtml(client.phone)}`:''}
-        </div>
-      </div>
-    </div>
-    <table class="items" cellspacing="0" cellpadding="0">
-      <thead><tr>
-        <th style="text-align:left;width:55%;">Descrição</th>
-        <th style="text-align:center;width:10%;">Qtd</th>
-        <th style="text-align:right;width:17%;">Valor Unit.</th>
-        <th style="text-align:right;width:18%;">Total</th>
-      </tr></thead>
-      <tbody>${itemRows}</tbody>
-    </table>
-    <table style="width:100%;border-collapse:collapse;margin-top:12px;" cellspacing="0" cellpadding="0"><tr>
-      <td style="padding:14px 16px;text-align:right;font-weight:700;font-size:13pt;color:#fff;background:#0d7de0;border-radius:6px 0 0 6px;">TOTAL:</td>
-      <td style="padding:14px 16px;text-align:right;font-weight:900;font-size:17pt;color:#fff;background:#0d7de0;border-radius:0 6px 6px 0;white-space:nowrap;width:22%;">R$ ${mf(q.total||0)}</td>
-    </tr></table>
-    ${notesHtml}
-    <div style="text-align:center;margin-top:100px;margin-bottom:20px;">
-      <div style="width:50%;border-top:1.5px solid #1a1a1a;margin:0 auto;"></div>
-      <div style="font-weight:700;font-size:11pt;margin-top:8px;">${escapeHtml(issuer.name||'')}</div>
-    </div>
-  </div>
-  <div class="footer">Orçamento gerado em: ${dateOnly} • SoftPrime Orçamentos</div>
-</body></html>`;
-}
-
-// ========== GERAÇÃO PDF — MODELO MINIMALISTA ==========
-function buildPdfMinimalista(q, issuer, client) {
-  const dateOnly = formatDateISOtoLocal(q.createdAt);
-  const logoHtml = issuer.logo ? `<div style="margin-bottom:20px;"><img src="${issuer.logo}" style="max-height:70px;max-width:200px;object-fit:contain;" /></div>` : '';
-  const watermark = getWatermarkHtml();
-  const itemRows = (q.items||[]).map(it => `
-    <tr>
-      <td style="padding:12px 0;border-bottom:1px solid #f3f4f6;font-size:11pt;">${escapeHtml(it.descricao||'')}</td>
-      <td style="padding:12px 0;border-bottom:1px solid #f3f4f6;text-align:center;font-size:11pt;color:#6b7280;">${it.quantidade}</td>
-      <td style="padding:12px 0;border-bottom:1px solid #f3f4f6;text-align:right;font-size:11pt;color:#6b7280;">R$ ${mfDocUnit(it.valorUnitario)}</td>
-      <td style="padding:12px 0;border-bottom:1px solid #f3f4f6;text-align:right;font-size:11pt;font-weight:700;">R$ ${mf((it.quantidade||0)*(it.valorUnitario||0))}</td>
-    </tr>`).join('');
-  const notesHtml = q.notes ? `<div style="margin-top:20px;padding:14px 0;border-top:1px solid #f3f4f6;font-size:10pt;color:#6b7280;"><strong style="color:#1a1a1a;">Observações:</strong><br/>${escapeHtml(q.notes).replace(/\n/g,'<br/>')}</div>` : '';
-  const validadeHtml = q.validade ? `<div style="font-size:10pt;color:#9ca3af;margin-bottom:20px;">Válido até: ${escapeHtml(q.validade)}</div>` : '';
-
-  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
-  <title>Orçamento ${escapeHtml(q.numero||q.id)}</title>
-  <style>
-    *{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
-    @page{margin:2.5cm;size:A4 portrait;}
-    body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:11pt;color:#1a1a1a;margin:0 auto;max-width:700px;padding:0;position:relative;}
-    @media print{body{padding:0;}}
-  </style></head><body>
-  ${watermark}
-  ${logoHtml}
-  <div style="border-bottom:2px solid #1a1a1a;padding-bottom:20px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:flex-end;">
-    <div>
-      <div style="font-size:28pt;font-weight:900;letter-spacing:2px;color:#1a1a1a;line-height:1;">ORÇAMENTO</div>
-      <div style="font-size:12pt;color:#9ca3af;margin-top:4px;">${escapeHtml(q.numero||q.id)}</div>
-    </div>
-    <div style="text-align:right;font-size:10pt;color:#6b7280;line-height:1.8;">
-      <div>${dateOnly}</div>
-      ${q.validade ? `<div>Válido até: ${escapeHtml(q.validade)}</div>` : ''}
-    </div>
-  </div>
-  <div style="display:flex;gap:40px;margin-bottom:32px;">
-    <div style="flex:1;">
-      <div style="font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#9ca3af;margin-bottom:8px;">De</div>
-      <div style="font-size:13pt;font-weight:700;">${escapeHtml(issuer.name||'—')}</div>
-      <div style="font-size:9pt;color:#6b7280;margin-top:4px;line-height:1.7;">
-        ${issuer.cnpjCpf?`${escapeHtml(issuer.cnpjCpf)}<br/>`:''}
-        ${issuer.address?`${escapeHtml(issuer.address)}<br/>`:''}
-        ${issuer.phone?`Tel: ${escapeHtml(issuer.phone)}`:''}
-      </div>
-    </div>
-    <div style="flex:1;">
-      <div style="font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#9ca3af;margin-bottom:8px;">Para</div>
-      <div style="font-size:13pt;font-weight:700;">${escapeHtml(client.name||'—')}</div>
-      <div style="font-size:9pt;color:#6b7280;margin-top:4px;line-height:1.7;">
-        ${client.cnpjCpf?`${escapeHtml(client.cnpjCpf)}<br/>`:''}
-        ${client.address?`${escapeHtml(client.address)}<br/>`:''}
-        ${client.phone?`Tel: ${escapeHtml(client.phone)}`:''}
-      </div>
-    </div>
-  </div>
-  <table style="width:100%;border-collapse:collapse;" cellspacing="0" cellpadding="0">
-    <thead><tr style="border-bottom:2px solid #1a1a1a;">
-      <th style="text-align:left;padding:0 0 10px;font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;width:55%;">Descrição</th>
-      <th style="text-align:center;padding:0 0 10px;font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;width:10%;">Qtd</th>
-      <th style="text-align:right;padding:0 0 10px;font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;width:17%;">Unit.</th>
-      <th style="text-align:right;padding:0 0 10px;font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7280;width:18%;">Total</th>
-    </tr></thead>
-    <tbody>${itemRows}</tbody>
-  </table>
-  <div style="display:flex;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:2px solid #1a1a1a;">
-    <div style="text-align:right;">
-      <div style="font-size:10pt;color:#6b7280;margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;">Total</div>
-      <div style="font-size:22pt;font-weight:900;">R$ ${mf(q.total||0)}</div>
-    </div>
-  </div>
-  ${notesHtml}
-  <div style="margin-top:100px;margin-bottom:20px;">
-    <div style="width:45%;border-top:1px solid #1a1a1a;"></div>
-    <div style="font-size:10pt;font-weight:700;margin-top:8px;">${escapeHtml(issuer.name||'')}</div>
-  </div>
-  <div style="position:fixed;bottom:0;left:0;right:0;font-size:9pt;color:#d1d5db;text-align:center;padding:5px 0;border-top:1px solid #f3f4f6;background:#fff;">Orçamento gerado em: ${dateOnly} • SoftPrime</div>
-</body></html>`;
-}
-
-// ========== DISPATCHER DE PDF ==========
-function generatePDFFromQuote(quoteId, modelo) {
-  try {
-    const q = store.quotes.find(x => x.id === quoteId);
-    if (!q) { showNotification('Orçamento não encontrado','error'); return; }
-    const issuer = store.issuers.find(i => i.id === q.issuerId) || {};
-    const client = store.clients.find(c => c.id === q.clientId) || {};
-
-    // Se não foi passado modelo, abre o seletor
-    if (!modelo) {
-      openPdfModelSelector(quoteId);
-      return;
-    }
-
-    // Paywall: modelos moderno/minimalista = pro+
-    if (['moderno','minimalista'].includes(modelo)) {
-      if (window.PlanGuard && !window.PlanGuard.hasAccess('pdf')) {
-        window.PlanGuard.openPaywall('pdf');
-        return;
-      }
-    }
-
-    // Paywall: PDF com logo = pro+ (plano intermediário)
-    if (issuer.logo && window.PlanGuard && !window.PlanGuard.hasAccess('pdf')) {
-      window.PlanGuard.openPaywall('pdf');
-      return;
-    }
-
-    let fullDoc;
-    if (modelo === 'moderno')        fullDoc = buildPdfModerno(q, issuer, client);
-    else if (modelo === 'minimalista') fullDoc = buildPdfMinimalista(q, issuer, client);
-    else                               fullDoc = buildPdfClassico(q, issuer, client);
-
-    // Detecta mobile (iOS/Android)
-    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-
-    if (isMobile) {
-      // No mobile o iframe oculto não dispara print — abre nova aba com autoprint
-      const htmlWithPrint = fullDoc.replace('</body>', '<script>window.onload=function(){setTimeout(function(){window.print();},600);};<\/script></body>');
-      const blob = new Blob([htmlWithPrint], { type: 'text/html;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const tab = window.open(url, '_blank');
-      if (!tab) { showNotification('Permita pop-ups para gerar o PDF', 'error'); }
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-    } else {
-      // Desktop: iframe oculto
-      let iframe = document.getElementById('_softprime_pdf_frame');
-      if (!iframe) {
-        iframe = document.createElement('iframe');
-        iframe.id = '_softprime_pdf_frame';
-        iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;visibility:hidden;';
-        document.body.appendChild(iframe);
-      }
-      const iDoc = iframe.contentWindow.document;
-      iDoc.open(); iDoc.write(fullDoc); iDoc.close();
-      const pending = Array.from(iDoc.images).filter(i => !i.complete);
-      const doPrint = () => { iframe.contentWindow.focus(); iframe.contentWindow.print(); };
-      if (!pending.length) { setTimeout(doPrint, 400); }
-      else {
-        let done = 0;
-        pending.forEach(img => {
-          img.addEventListener('load',  () => { done++; if (done === pending.length) setTimeout(doPrint, 300); });
-          img.addEventListener('error', () => { done++; if (done === pending.length) setTimeout(doPrint, 300); });
-        });
-      }
-    }
-  } catch(err) { console.error('[ERROR] generatePDFFromQuote:', err); showNotification('Erro ao gerar PDF','error'); }
-}
-
-// ========== EXPORTAÇÃO WORD (.doc) ==========
-function exportQuoteDoc(quoteId) {
-  // PAYWALL: Word requer premium
-  if (window.PlanGuard && !window.PlanGuard.hasAccess('word')) {
-    window.PlanGuard.openPaywall('word');
-    return;
-  }
-  try {
-    const q = store.quotes.find(x => x.id === quoteId);
-    if (!q) { showNotification('Orçamento não encontrado','error'); return; }
-    const issuer = store.issuers.find(i => i.id === q.issuerId) || {};
-    const client = store.clients.find(c => c.id === q.clientId) || {};
-    const dateOnly = formatDateISOtoLocal(q.createdAt);
-    const logoHtml = issuer.logo ? `<p style="text-align:center;margin-bottom:12px;"><img src="${issuer.logo}" style="max-height:100px;max-width:260px;" /></p>` : '';
-    const watermark = getWatermarkHtml();
-    const validadeHtml = q.validade ? `<p style="font-size:9pt;color:#6b7280;margin-bottom:12px;">Válido até: <strong>${escapeHtml(q.validade)}</strong></p>` : '';
-    const itemRows = (q.items||[]).map(it => `
-      <tr>
-        <td style="border:1px solid #ccc;padding:8px 10px;">${escapeHtml(it.descricao||'')}</td>
-        <td style="border:1px solid #ccc;padding:8px 10px;text-align:center;">${it.quantidade}</td>
-        <td style="border:1px solid #ccc;padding:8px 10px;text-align:right;">R$ ${mfDocUnit(it.valorUnitario)}</td>
-        <td style="border:1px solid #ccc;padding:8px 10px;text-align:right;font-weight:bold;">R$ ${mf((it.quantidade||0)*(it.valorUnitario||0))}</td>
-      </tr>`).join('');
-    const notesHtml = q.notes ? `<p style="margin-top:20px;padding:10px;background:#fffbeb;border-left:3px solid #f59e0b;"><strong>Observações:</strong><br/>${escapeHtml(q.notes).replace(/\n/g,'<br/>')}</p>` : '';
-
-    const doc = `<!doctype html>
-<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
-<head><meta charset="utf-8"><title>Orçamento ${escapeHtml(q.numero||q.id)}</title>
-<style>
-  @page{margin:2.5cm;size:A4 portrait;}
-  body{font-family:Arial,sans-serif;font-size:11pt;color:#1a1a1a;margin:0;padding:0;}
-  .titulo{font-size:20pt;color:#0d7de0;text-align:center;font-weight:bold;letter-spacing:2px;margin:8px 0 2px;}
-  .numero{font-size:12pt;text-align:center;color:#6b7280;margin:0 0 18px;}
-  table.layout{width:100%;border-collapse:collapse;margin-bottom:18px;}
-  .box{padding:10px 14px;border:1px solid #e0e0e0;background:#f9fafb;}
-  .label{font-size:9pt;color:#0d7de0;font-weight:bold;letter-spacing:1px;margin-bottom:5px;display:block;}
-  .name{font-size:12pt;font-weight:bold;margin-bottom:3px;display:block;}
-  .cnpj{font-size:9pt;color:#6b7280;margin:2px 0;display:block;}
-  .info{font-size:9pt;color:#555;margin:1px 0;display:block;}
-  table.items{width:100%;border-collapse:collapse;margin-top:10px;}
-  table.items th{background:#0d7de0;color:#fff;border:1px solid #0a5fb8;padding:8px 10px;font-size:10pt;font-weight:bold;}
-  table.items td{border:1px solid #ccc;padding:8px 10px;font-size:10pt;}
-  .footer{position:fixed;bottom:0;left:0;right:0;text-align:center;font-size:9pt;color:#9ca3af;padding:5px 0;border-top:1px solid #e5e7eb;background:#fff;}
-  @media print{.footer{position:fixed;bottom:0;left:0;right:0;}}
-</style></head>
-<body>
-  ${watermark}
-  ${logoHtml}
-  <p class="titulo">ORÇAMENTO</p>
-  <p class="numero">${escapeHtml(q.numero||q.id)}</p>
-  ${validadeHtml}
-  <table class="layout" cellspacing="0" cellpadding="0"><tr>
-    <td style="width:49%;vertical-align:top;" class="box">
-      <span class="label">EMISSOR</span>
-      <span class="name">${escapeHtml(issuer.name||'—')}</span>
-      ${issuer.cnpjCpf?`<span class="cnpj">CNPJ/CPF: ${escapeHtml(issuer.cnpjCpf)}</span>`:''}
-      ${issuer.address?`<span class="info">${escapeHtml(issuer.address)}</span>`:''}
-      ${issuer.phone?`<span class="info">Tel: ${escapeHtml(issuer.phone)}</span>`:''}
-    </td>
-    <td style="width:2%;"></td>
-    <td style="width:49%;vertical-align:top;" class="box">
-      <span class="label">DESTINATÁRIO</span>
-      <span class="name">${escapeHtml(client.name||'—')}</span>
-      ${client.cnpjCpf?`<span class="cnpj">CNPJ/CPF: ${escapeHtml(client.cnpjCpf)}</span>`:''}
-      ${client.address?`<span class="info">${escapeHtml(client.address)}</span>`:''}
-      ${client.phone?`<span class="info">Tel: ${escapeHtml(client.phone)}</span>`:''}
-    </td>
-  </tr></table>
-  <table class="items" cellspacing="0" cellpadding="0">
-    <thead><tr>
-      <th style="text-align:left;width:55%;">Descrição</th>
-      <th style="text-align:center;width:10%;">Qtd</th>
-      <th style="text-align:right;width:17%;">Valor Unit.</th>
-      <th style="text-align:right;width:18%;">Total</th>
-    </tr></thead>
-    <tbody>${itemRows}</tbody>
-  </table>
-  <table style="width:100%;border-collapse:collapse;margin-top:14px;" cellspacing="0" cellpadding="0"><tr>
-    <td style="padding:12px;text-align:right;font-weight:bold;font-size:12pt;color:#0d7de0;background:#eef6ff;border:2px solid #93c5fd;">TOTAL:</td>
-    <td style="padding:12px;text-align:right;font-weight:bold;font-size:15pt;color:#0d7de0;background:#eef6ff;border:2px solid #93c5fd;width:22%;white-space:nowrap;">R$ ${mf(q.total||0)}</td>
-  </tr></table>
-  ${notesHtml}
-  <div style="text-align:center;margin-top:120px;margin-bottom:30px;">
-    <div style="width:55%;border-top:1.5pt solid #1a1a1a;margin:0 auto;"></div>
-    <div style="font-weight:bold;font-size:11pt;margin-top:8px;">${escapeHtml(issuer.name||'')}</div>
-  </div>
-  <p class="footer">Orçamento gerado em: ${dateOnly} • SoftPrime Orçamentos</p>
-</body></html>`;
-
-    const blob = new Blob(['\ufeff' + doc], { type: 'application/msword;charset=utf-8' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href = url;
-    a.download = `orcamento_${q.numero||q.id}.doc`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showNotification('✅ Word exportado!', 'success');
-  } catch(err) { console.error('[ERROR] exportQuoteDoc:', err); showNotification('Erro ao exportar Word','error'); }
-}
-
-// ========== EXPORTAÇÃO EXCEL (.xlsx) — via biblioteca SheetJS CDN ==========
-async function exportQuoteExcel(quoteId) {
-  // PAYWALL: Excel requer premium
-  if (window.PlanGuard && !window.PlanGuard.hasAccess('excel')) {
-    window.PlanGuard.openPaywall('excel');
-    return;
-  }
-  try {
-    // Carrega SheetJS se ainda não estiver disponível
-    if (typeof XLSX === 'undefined') {
-      await new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
-        s.onload = resolve;
-        s.onerror = reject;
-        document.head.appendChild(s);
-      });
-    }
-
-    const q = store.quotes.find(x => x.id === quoteId);
-    if (!q) { showNotification('Orçamento não encontrado','error'); return; }
-    const issuer = store.issuers.find(i => i.id === q.issuerId) || {};
-    const client = store.clients.find(c => c.id === q.clientId) || {};
-
-    const wb = XLSX.utils.book_new();
-
-    // Aba 1: Orçamento
-    const rows = [
-      ['ORÇAMENTO', q.numero||q.id],
-      ['Data', formatDateISOtoLocal(q.createdAt)],
-      q.validade ? ['Validade', q.validade] : null,
-      [],
-      ['EMISSOR', issuer.name||'—'],
-      ['CNPJ/CPF Emissor', issuer.cnpjCpf||''],
-      ['Endereço Emissor', issuer.address||''],
-      ['Telefone Emissor', issuer.phone||''],
-      [],
-      ['DESTINATÁRIO', client.name||'—'],
-      ['CNPJ/CPF Cliente', client.cnpjCpf||''],
-      ['Endereço Cliente', client.address||''],
-      ['Telefone Cliente', client.phone||''],
-      [],
-      ['Descrição', 'Quantidade', 'Valor Unit. (R$)', 'Total (R$)'],
-      ...(q.items||[]).map(it => [
-        it.descricao||'',
-        it.quantidade||0,
-        parseFloat(it.valorUnitario||0),
-        parseFloat(((it.quantidade||0)*(it.valorUnitario||0)).toFixed(2))
-      ]),
-      [],
-      ['', '', 'TOTAL (R$)', parseFloat((q.total||0).toFixed(2))],
-      [],
-      q.notes ? ['Observações', q.notes] : null,
-    ].filter(Boolean);
-
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-
-    // Larguras de coluna
-    ws['!cols'] = [{ wch: 35 }, { wch: 14 }, { wch: 18 }, { wch: 16 }];
-
-    XLSX.utils.book_append_sheet(wb, ws, 'Orçamento');
-    XLSX.writeFile(wb, `orcamento_${q.numero||q.id}.xlsx`);
-    showNotification('✅ Excel exportado!', 'success');
-  } catch(err) { console.error('[ERROR] exportQuoteExcel:', err); showNotification('Erro ao exportar Excel','error'); }
-}
-
-// ========== BACKUP EM EXCEL (.xlsx) ==========
-async function exportBackupExcel() {
-  // PAYWALL: Backup requer premium
-  if (window.PlanGuard && !window.PlanGuard.hasAccess('excel')) {
-    window.PlanGuard.openPaywall('excel');
-    return;
-  }
-  try {
-    if (typeof XLSX === 'undefined') {
-      await new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
-        s.onload = resolve; s.onerror = reject;
-        document.head.appendChild(s);
-      });
-    }
-
-    const wb = XLSX.utils.book_new();
-
-    // Aba Orçamentos
-    const quotesRows = [['Número','Emissor','CNPJ Emissor','Cliente','CNPJ Cliente','Data','Validade','Subtotal','Total','Observações']];
-    for (const q of store.quotes) {
-      const iss = store.issuers.find(i => i.id === q.issuerId) || {};
-      const cli = store.clients.find(c => c.id === q.clientId) || {};
-      quotesRows.push([
-        q.numero||'', iss.name||'', iss.cnpjCpf||'',
-        cli.name||'', cli.cnpjCpf||'',
-        formatDateISOtoLocal(q.createdAt), q.validade||'',
-        parseFloat((q.subtotal||0).toFixed(2)),
-        parseFloat((q.total||0).toFixed(2)),
-        q.notes||''
-      ]);
-    }
-    const wsQ = XLSX.utils.aoa_to_sheet(quotesRows);
-    wsQ['!cols'] = [{wch:14},{wch:28},{wch:18},{wch:28},{wch:18},{wch:12},{wch:12},{wch:12},{wch:12},{wch:40}];
-    XLSX.utils.book_append_sheet(wb, wsQ, 'Orçamentos');
-
-    // Aba Emissores
-    const issRows = [['Nome','CNPJ/CPF','Endereço','Telefone']];
-    store.issuers.forEach(i => issRows.push([i.name||'', i.cnpjCpf||'', i.address||'', i.phone||'']));
-    const wsI = XLSX.utils.aoa_to_sheet(issRows);
-    wsI['!cols'] = [{wch:30},{wch:18},{wch:40},{wch:16}];
-    XLSX.utils.book_append_sheet(wb, wsI, 'Emissores');
-
-    // Aba Clientes
-    const cliRows = [['Nome','CNPJ/CPF','Endereço','Telefone']];
-    store.clients.forEach(c => cliRows.push([c.name||'', c.cnpjCpf||'', c.address||'', c.phone||'']));
-    const wsC = XLSX.utils.aoa_to_sheet(cliRows);
-    wsC['!cols'] = [{wch:30},{wch:18},{wch:40},{wch:16}];
-    XLSX.utils.book_append_sheet(wb, wsC, 'Clientes');
-
-    const date = new Date().toISOString().slice(0,10);
-    XLSX.writeFile(wb, `backup_softprime_${date}.xlsx`);
-    showNotification('✅ Backup exportado com sucesso!', 'success');
-  } catch(err) { console.error('[ERROR] exportBackupExcel:', err); showNotification('Erro ao gerar backup','error'); }
-}
-
-// ========== BOTÃO CONTATO DESENVOLVEDOR (WhatsApp) ==========
-function renderDevContactButton() {
-  const existing = document.getElementById('sp-dev-contact-btn');
-  if (existing) return;
-
-  // Estilo responsivo injetado via <style>
-  const style = document.createElement('style');
-  style.textContent = `
-    #sp-dev-contact-btn {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      z-index: 9989;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(135deg, #25d366, #128c7e);
-      color: #fff;
-      width: 52px;
-      height: 52px;
-      border-radius: 50%;
-      box-shadow: 0 4px 20px rgba(37,211,102,0.4);
-      text-decoration: none;
-      transition: all 0.2s;
-      cursor: pointer;
-    }
-    #sp-dev-contact-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 28px rgba(37,211,102,0.5);
-    }
-    @media (max-width: 600px) {
-      #sp-dev-contact-btn {
-        bottom: 16px;
-        right: 16px;
-        width: 46px;
-        height: 46px;
-      }
-    }
-  `;
-  document.head.appendChild(style);
-
-  const btn = document.createElement('a');
-  btn.id     = 'sp-dev-contact-btn';
-  const whatsNumber = '5518981607700';
-  const whatsMsg    = encodeURIComponent('Olá! Tenho interesse em contratar um plano do SoftPrime. Pode me ajudar?');
-  btn.href   = `https://wa.me/${whatsNumber}?text=${whatsMsg}`;
-  btn.target = '_blank';
-  btn.rel    = 'noopener noreferrer';
-  btn.title  = 'Falar com o desenvolvedor no WhatsApp';
-  btn.innerHTML = `
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-    </svg>
-  `;
-
-  document.body.appendChild(btn);
-}
-
-// ========== RENDER DA QUOTA HTML (prévia modal) ==========
+// ========== RENDER QUOTE HTML (prévia modal) ==========
 function renderQuoteHtml(q, issuer, client){
   const dateOnly=formatDateISOtoLocal(q.createdAt);
   const plan = window.PlanGuard ? window.PlanGuard.getActivePlan() : (localStorage.getItem('softprime_plan')||null);
@@ -1731,6 +1030,60 @@ function renderQuoteHtml(q, issuer, client){
     </div>`;
 }
 
+// ========== WHATSAPP CONTACT BUTTON ==========
+function renderDevContactButton(){
+  if (document.getElementById('sp-dev-contact-btn')) return;
+  const style = document.createElement('style');
+  style.textContent = `
+    #sp-dev-contact-btn {
+      position: fixed;
+      bottom: 24px;
+      right: 20px;
+      z-index: 9998;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #25d366, #128c7e);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 20px rgba(37,211,102,0.4);
+      text-decoration: none;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+    #sp-dev-contact-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 28px rgba(37,211,102,0.5);
+    }
+    @media (max-width: 600px) {
+      #sp-dev-contact-btn {
+        bottom: 16px;
+        right: 16px;
+        width: 46px;
+        height: 46px;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+
+  const btn = document.createElement('a');
+  btn.id     = 'sp-dev-contact-btn';
+  const whatsNumber = '5518981607700';
+  const whatsMsg    = encodeURIComponent('Olá! Tenho interesse em contratar um plano do SoftPrime. Pode me ajudar?');
+  btn.href   = `https://wa.me/${whatsNumber}?text=${whatsMsg}`;
+  btn.target = '_blank';
+  btn.rel    = 'noopener noreferrer';
+  btn.title  = 'Falar com o desenvolvedor no WhatsApp';
+  btn.innerHTML = `
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+    </svg>
+  `;
+  document.body.appendChild(btn);
+}
+
 // ========== INIT ==========
 function renderAll(){ renderIssuers(); renderClients(); renderQuotes(); renderItems(currentItems); }
 
@@ -1740,7 +1093,6 @@ async function initApp() {
   await loadAllData();
   renderAll();
   setDefaultQuoteFields();
-  // Botão de contato WhatsApp — aparece em todas as páginas do app
   renderDevContactButton();
   console.log('✅ SoftPrime iniciado! Usuário:', getUserId());
 
@@ -1749,7 +1101,6 @@ async function initApp() {
     if (typeof renderPanel === 'function') renderPanel();
   }
 
-  // ── Retomar edição vinda da página Orçamentos Salvos ─────────────────────
   const pendingEditId = sessionStorage.getItem('editQuoteId');
   if (pendingEditId) {
     sessionStorage.removeItem('editQuoteId');
