@@ -1,4 +1,4 @@
-// plan-guard.js — Controle de planos e trial de 7 dias (SoftPrime)
+// plan-guard.js — Controle de planos e trial de 7 dias (GTech Prime)
 // Fonte de verdade: tabela 'profiles' no Supabase (campo trial_start + plan)
 // O localStorage é apenas cache — nunca é a fonte definitiva
 
@@ -6,9 +6,9 @@
   'use strict';
 
   const TRIAL_DAYS     = 7;
-  const LS_PLAN_KEY    = 'softprime_plan';
-  const LS_TRIAL_KEY   = 'softprime_trial_start';
-  const LS_CHECKED_KEY = 'softprime_plan_checked_at';
+  const LS_PLAN_KEY    = 'gtechprime_plan';
+  const LS_TRIAL_KEY   = 'gtechprime_trial_start';
+  const LS_CHECKED_KEY = 'gtechprime_plan_checked_at';
   const CHECK_TTL      = 5 * 60 * 1000; // revalida do Supabase a cada 5 min
 
   // ── Usuários com acesso vitalício (nunca cobrados) ─────────────────────

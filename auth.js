@@ -150,7 +150,7 @@ class AuthManager {
 
   // Retorna o plano atual do usuário (lido do localStorage)
   getUserPlan() {
-    return localStorage.getItem('softprime_plan') || null;
+    return localStorage.getItem('gtechprime_plan') || null;
   }
 
   // Retorna label legível do plano

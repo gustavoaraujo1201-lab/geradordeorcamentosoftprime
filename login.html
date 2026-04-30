@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Login - SoftPrime Orçamentos</title>
+  <title>Login — GTech Orçamentos</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -198,9 +198,9 @@
   <div class="login-wrap">
     <div class="login-header">
       <div class="login-logo">
-        <div class="logo-name">Soft<span>Prime</span></div>
+        <div class="logo-name">GTech <span>Orçamentos</span></div>
       </div>
-      <p class="login-subtitle">Gerador de Orçamentos — Faça login ou crie sua conta</p>
+      <p class="login-subtitle">GTech Orçamentos — Faça login ou crie sua conta</p>
     </div>
 
     <!-- Tabs -->
@@ -285,7 +285,7 @@
       </div>
     </form>
 
-    <div class="login-footer">© 2026 SoftPrime — Todos os direitos reservados</div>
+    <div class="login-footer">© 2026 GTech Prime — Todos os direitos reservados</div>
   </div>
 
   <!-- Supabase SDK -->
@@ -475,7 +475,7 @@
     function setRemember(state) {
       rememberToggleEl.classList.toggle('on', state);
       rememberLabel.setAttribute('aria-checked', state ? 'true' : 'false');
-      try { localStorage.setItem('softprime_remember', state ? '1' : '0'); } catch(e) {}
+      try { localStorage.setItem('gtechprime_remember', state ? '1' : '0'); } catch(e) {}
     }
 
     function toggleRemember() {
@@ -488,7 +488,7 @@
 
     // Carrega preferência salva
     try {
-      setRemember(localStorage.getItem('softprime_remember') === '1');
+      setRemember(localStorage.getItem('gtechprime_remember') === '1');
     } catch(e) {}
 
     // Ripple no botão

@@ -171,7 +171,7 @@
       #sp-toast{bottom:80px!important;right:12px!important;left:12px!important;max-width:none!important;}
     }
   </style>
-  <title>Orçamentos Salvos — SoftPrime</title>
+  <title>Orçamentos Salvos — GTech Orçamentos</title>
   <style>
     .quotes-layout{display:grid;grid-template-columns:240px 1fr;gap:20px;align-items:flex-start;}
     .qs-filters-card{background:#fff;border:1px solid rgba(20,30,40,0.12);border-radius:10px;padding:18px;box-shadow:0 2px 12px rgba(20,30,40,0.08);margin-bottom:14px;}
@@ -259,7 +259,7 @@
     <nav class="sidebar">
       <div class="sidebar-brand">
         <div class="sidebar-logo-text">
-          <strong>SoftPrime</strong>
+          <strong>GTech Orçamentos</strong>
           <small>Gerador de Orçamentos</small>
         </div>
       </div>
@@ -364,7 +364,7 @@
       </div>
     </div>
 
-    <footer class="footer"><p>© 2026 Desenvolvido por <strong>SoftPrime</strong> - Todos os direitos reservados</p></footer>
+    <footer class="footer"><p>© 2026 Desenvolvido por <strong>GTech Orçamentos</strong> - Todos os direitos reservados</p></footer>
   </div>
 
 
@@ -812,7 +812,7 @@
       // ── Rodapé fixo no fundo da página ───────────────────────────────────────
       const dateStr = q.createdAt ? new Date(q.createdAt).toLocaleDateString('pt-BR') : '';
       pdf.setFont('helvetica','normal'); pdf.setFontSize(8); setTxt('#9ca3af');
-      pdf.text('Orcamento gerado em: ' + dateStr + ' - SoftPrime', W/2, H - 8, {align:'center'});
+      pdf.text('Orcamento gerado em: ' + dateStr + ' - GTech Orçamentos', W/2, H - 8, {align:'center'});
 
       return pdf.output('blob');
     }
@@ -952,7 +952,7 @@
       const content = document.getElementById('previewArea') ? document.getElementById('previewArea').innerHTML : '';
       if (!content) { return; }
       const win = window.open('', '_blank', 'width=900,height=700');
-      win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Orçamento - SoftPrime</title>
+      win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Orçamento - GTech Orçamentos</title>
         <style>
           *{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
           @page{margin:2cm;size:A4 portrait;}
@@ -1221,7 +1221,7 @@
   </script>
 
   <!-- ═══════════════════════════════════════════════════
-       PAYWALL MODAL — SoftPrime
+       PAYWALL MODAL — GTech Orçamentos
        Uso: window.PaywallModal.open('pdf')
             window.PaywallModal.open('word')
             window.PaywallModal.hasAccess('pdf') → true/false

@@ -1,4 +1,4 @@
-// app.js — Gerador de Orçamentos SoftPrime
+// app.js — Gerador de Orçamentos GTech Prime
 // VERSÃO SUPABASE: dados sincronizados entre dispositivos por usuário
 // Migração automática do localStorage na primeira vez
 
@@ -12,8 +12,8 @@ function getUserId() {
 }
 
 // ========== LEGACY STORE KEY ==========
-const STORE_KEY = "softprime_quotes_v2";
-const MIGRATION_KEY = "softprime_migrated_v1";
+const STORE_KEY = "gtechprime_quotes_v2";
+const MIGRATION_KEY = "gtechprime_migrated_v1";
 
 // ========== UTILITIES ==========
 function uid(){
@@ -924,7 +924,7 @@ if (printBtn){
   printBtn.addEventListener("click",()=>{
     const content = previewArea ? previewArea.innerHTML : "";
     if (!content){ showNotification("Nenhum conteúdo para imprimir.","info"); return; }
-    triggerPrint(content,"Orçamento - SoftPrime");
+    triggerPrint(content,"Orçamento - GTech Orçamentos");
   });
 }
 
@@ -951,14 +951,14 @@ if (exportCsvBtn){
     });
     const blob=new Blob(["\uFEFF"+rows.join("\n")],{type:'text/csv;charset=utf-8'});
     const a=document.createElement('a');
-    a.href=URL.createObjectURL(blob); a.download='orcamentos_softprime.csv'; a.click();
+    a.href=URL.createObjectURL(blob); a.download='orcamentos_gtechprime.csv'; a.click();
   });
 }
 
 // ========== RENDER QUOTE HTML (prévia modal) ==========
 function renderQuoteHtml(q, issuer, client){
   const dateOnly=formatDateISOtoLocal(q.createdAt);
-  const plan = window.PlanGuard ? window.PlanGuard.getActivePlan() : (localStorage.getItem('softprime_plan')||null);
+  const plan = window.PlanGuard ? window.PlanGuard.getActivePlan() : (localStorage.getItem('gtechprime_plan')||null);
   const isPremium = plan === 'premium';
   const watermarkHtml = isPremium ? '' : `
     <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);
@@ -1071,7 +1071,7 @@ function renderDevContactButton(){
   const btn = document.createElement('a');
   btn.id     = 'sp-dev-contact-btn';
   const whatsNumber = '5518981607700';
-  const whatsMsg    = encodeURIComponent('Olá! Tenho interesse em contratar um plano do SoftPrime. Pode me ajudar?');
+  const whatsMsg    = encodeURIComponent('Olá! Tenho interesse em contratar um plano do GTech Orçamentos. Pode me ajudar?');
   btn.href   = `https://wa.me/${whatsNumber}?text=${whatsMsg}`;
   btn.target = '_blank';
   btn.rel    = 'noopener noreferrer';
@@ -1094,7 +1094,7 @@ async function initApp() {
   renderAll();
   setDefaultQuoteFields();
   renderDevContactButton();
-  console.log('✅ SoftPrime iniciado! Usuário:', getUserId());
+  console.log('✅ GTech Orçamentos iniciado! Usuário:', getUserId());
 
   const p = window.location.pathname;
   if (p.endsWith('orcamentos_salvos.html') || p === '/orcamentos_salvos' || p === '/orcamentos_salvos/') {

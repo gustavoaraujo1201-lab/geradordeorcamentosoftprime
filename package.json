@@ -1,7 +1,7 @@
 {
-  "name": "gerador-orcamentos",
+  "name": "gtechprime-orcamentos",
   "version": "1.0.0",
-  "description": "Gerador de orçamentos (frontend estático)",
+  "description": "GTech Prime Orçamentos — Sistema de Geração de Orçamentos",
   "main": "app.js",
   "author": "",
   "license": "MIT"

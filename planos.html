@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Planos — SoftPrime Orçamentos</title>
+<title>Planos — GTech Orçamentos</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -335,7 +335,7 @@
 
   <!-- Header -->
   <header>
-    <div class="logo-mark">⚡ SoftPrime</div>
+    <div class="logo-mark">⚡ GTech Orçamentos</div>
     <nav class="header-nav">
       <a href="/login" class="btn-back">← Voltar</a>
       <a href="/login" class="btn-login">Entrar</a>
@@ -382,7 +382,7 @@
 
       <div class="plan-header">
         <div class="plan-icon-big">🚀</div>
-        <div class="plan-title">SoftPrime Completo</div>
+        <div class="plan-title">GTech Orçamentos Completo</div>
         <div class="plan-subtitle">Todas as funcionalidades incluídas,<br>sem restrições e sem surpresas.</div>
       </div>
 
@@ -446,7 +446,7 @@
   </section>
 
   <footer>
-    <p>© 2026 SoftPrime — <a href="/login">Entrar no sistema</a> · Dúvidas? <a href="https://wa.me/5518981607700" target="_blank">Falar no WhatsApp</a></p>
+    <p>© 2026 GTech Prime — <a href="/login">Entrar no sistema</a> · Dúvidas? <a href="https://wa.me/5518981607700" target="_blank">Falar no WhatsApp</a></p>
   </footer>
 
 </div><!-- .page -->
@@ -526,9 +526,9 @@ function selectPeriod(period) {
 // ── Checkout ──
 function startCheckout() {
   const d = periodData[currentPeriod];
-  localStorage.setItem('softprime_plan', 'premium'); // acesso total
-  localStorage.setItem('softprime_plan_period', currentPeriod);
-  localStorage.setItem('softprime_plan_ts', Date.now());
+  localStorage.setItem('gtechprime_plan', 'premium'); // acesso total
+  localStorage.setItem('gtechprime_plan_period', currentPeriod);
+  localStorage.setItem('gtechprime_plan_ts', Date.now());
 
   document.getElementById('mp-loading').classList.add('show');
   setTimeout(() => { window.location.href = d.link; }, 900);
